@@ -40,6 +40,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role.Companion.Image
+import com.fitfood.clientapp.models.RegisterUser
+import com.fitfood.clientapp.models.StringBox
+import com.fitfood.clientapp.models.User
 import com.fitfood.clientapp.ui.theme.ClientAppTheme
 
 class MainActivity : ComponentActivity() {
@@ -53,9 +56,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+var userAuth = User()
+var userRegister = RegisterUser()
+
 @Composable
 fun AuthScreen() {
-    var isLogin by remember { mutableStateOf(false) }
+    var isLogin by remember { mutableStateOf(true) }
 
     Column(
         modifier = Modifier
@@ -97,8 +104,9 @@ fun AuthScreen() {
 
 @Composable
 fun LoginForm() {
-    var login by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    val login = remember { mutableStateOf(userAuth.Login) }
+    val password = remember { mutableStateOf(userAuth.Password) }
+    var showDialog by remember { mutableStateOf(false) }
 
     Column(modifier =
     Modifier
@@ -115,7 +123,7 @@ fun LoginForm() {
                 contentScale = ContentScale.Fit
             )
             Text("Логин", style = MaterialTheme.typography.titleMedium)
-            FitTextBox(login, "Введите логин или e-mail",Icons.Default.Face)
+            FitTextBox(login, "Введите логин или e-mail",Icons.Default.Face, KeyboardType.Email)
 
             Text("Пароль", style = MaterialTheme.typography.titleMedium)
             FitPasswordBox(password)
@@ -127,30 +135,41 @@ fun LoginForm() {
             verticalArrangement = Arrangement.Bottom
         ) {
             Button(
-                onClick = {  },
+                onClick = {
+                    userAuth.Login = login.value
+                    userAuth.Password = password.value
+                    showDialog = true
+                          },
                 modifier = Modifier.fillMaxWidth()
-                    .height(50.dp),
+                    .height(70.dp),
                 shape = RoundedCornerShape(20.dp),
                 colors = ButtonDefaults.buttonColors(Color(0xFF5E953B))
             ) {
                 Text("Войти")
             }
         }
+        if (showDialog) {
+            MessageBoxOk(
+                title = "Вход",
+                message = "Добро пожаловать, ${userAuth.toString()}!",
+                onDismiss = { showDialog = false }
+            )
+        }
     }
 }
 @Composable
 fun RegisterForm() {
-    var login by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
+    var login = remember { mutableStateOf(userRegister.Login) }
+    var email = remember { mutableStateOf(userRegister.Email) }
+    var password = remember { mutableStateOf(userRegister.Password) }
+    var confirmPassword = remember { mutableStateOf(userRegister.ConfirmPassword) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Text("Логин", style = MaterialTheme.typography.titleMedium)
         FitTextBox(login, "Введите ваш псевдним" ,Icons.Default.Face)
 
         Text("Email", style = MaterialTheme.typography.titleMedium)
-        FitTextBox(email, "Введите ваш e-mail" ,Icons.Default.Email)
+        FitTextBox(email, "Введите ваш e-mail" ,Icons.Default.Email, KeyboardType.Email)
 
         Text("Пароль", style = MaterialTheme.typography.titleMedium)
         FitPasswordBox(password)
@@ -167,7 +186,7 @@ fun RegisterForm() {
             Button(
                 onClick = {  },
                 modifier = Modifier.fillMaxWidth()
-                    .height(50.dp),
+                    .height(70.dp),
                 shape = RoundedCornerShape(20.dp),
                 colors = ButtonDefaults.buttonColors(Color(0xFF5E953B))
             ) {
@@ -178,11 +197,14 @@ fun RegisterForm() {
 }
 
 @Composable
-fun FitTextBox(content: String, label: String, icon: ImageVector)
+fun FitTextBox(content: MutableState<String>,
+               label: String,
+               icon: ImageVector,
+               keyboard: KeyboardType = KeyboardType.Text)
 {
     TextField(
-        value = content,
-        onValueChange = {  },
+        value = content.value,
+        onValueChange = { content.value = it },
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
@@ -194,15 +216,16 @@ fun FitTextBox(content: String, label: String, icon: ImageVector)
         colors = TextFieldDefaults.colors(
             unfocusedIndicatorColor = Color.Transparent,
             focusedIndicatorColor = Color.Transparent
-        )
+        ),
+        keyboardOptions = KeyboardOptions(keyboardType = keyboard)
     )
 }
 @Composable
-fun FitPasswordBox(password: String) {
+fun FitPasswordBox(password: MutableState<String>) {
     var hidePass by remember { mutableStateOf(true) }
     TextField(
-        value = password,
-        onValueChange = { },
+        value = password.value,
+        onValueChange = { password.value = it},
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
@@ -271,6 +294,27 @@ fun FitButtonImage(text: String,
 @Composable
 fun LoginFormPreview() {
     ClientAppTheme() {
-        AuthScreen()
+        AuthScreen();
     }
+}
+
+@Composable
+fun MessageBoxOk(title: String, message: String, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = title, style = MaterialTheme.typography.titleMedium)
+        },
+        text = {
+            Text(text = message, style = MaterialTheme.typography.bodyMedium)
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(Color(0xFF5E953B))
+            ) {
+                Text("OK")
+            }
+        }
+    )
 }
