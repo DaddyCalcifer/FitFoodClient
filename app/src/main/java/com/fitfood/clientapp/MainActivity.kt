@@ -1,12 +1,9 @@
 package com.fitfood.clientapp
 
-import android.graphics.drawable.Icon
-import android.media.Image
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.annotation.ColorRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -21,28 +18,21 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBox
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.Role.Companion.Image
-import com.fitfood.clientapp.models.RegisterUser
-import com.fitfood.clientapp.models.StringBox
-import com.fitfood.clientapp.models.User
+import com.fitfood.clientapp.models.requests.LoginRequest
+import com.fitfood.clientapp.models.requests.RegisterRequest
+import com.fitfood.clientapp.services.AuthService
 import com.fitfood.clientapp.ui.theme.ClientAppTheme
 
 class MainActivity : ComponentActivity() {
@@ -57,8 +47,9 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-var userAuth = User()
-var userRegister = RegisterUser()
+var userAuth = LoginRequest()
+var userRegister = RegisterRequest()
+var authService = AuthService()
 
 @Composable
 fun AuthScreen() {
@@ -104,8 +95,9 @@ fun AuthScreen() {
 
 @Composable
 fun LoginForm() {
-    val login = remember { mutableStateOf(userAuth.Login) }
-    val password = remember { mutableStateOf(userAuth.Password) }
+    val login = remember { mutableStateOf(userAuth.login) }
+    val password = remember { mutableStateOf(userAuth.password) }
+    var jwt = remember { mutableStateOf("") }
     var showDialog by remember { mutableStateOf(false) }
 
     Column(modifier =
@@ -136,10 +128,12 @@ fun LoginForm() {
         ) {
             Button(
                 onClick = {
-                    userAuth.Login = login.value
-                    userAuth.Password = password.value
-                    showDialog = true
-                          },
+                    authService.authorizeUser(login.value, password.value) { response ->
+                        println("Authorization response: $response")
+                        jwt.value = response.toString()
+                        showDialog = true
+                    }
+                },
                 modifier = Modifier.fillMaxWidth()
                     .height(70.dp),
                 shape = RoundedCornerShape(20.dp),
@@ -151,7 +145,7 @@ fun LoginForm() {
         if (showDialog) {
             MessageBoxOk(
                 title = "Вход",
-                message = "Добро пожаловать, ${userAuth.toString()}!",
+                message = "JWT ${jwt}!",
                 onDismiss = { showDialog = false }
             )
         }
@@ -159,10 +153,12 @@ fun LoginForm() {
 }
 @Composable
 fun RegisterForm() {
-    var login = remember { mutableStateOf(userRegister.Login) }
-    var email = remember { mutableStateOf(userRegister.Email) }
-    var password = remember { mutableStateOf(userRegister.Password) }
-    var confirmPassword = remember { mutableStateOf(userRegister.ConfirmPassword) }
+    var login = remember { mutableStateOf(userRegister.username) }
+    var email = remember { mutableStateOf(userRegister.email) }
+    var password = remember { mutableStateOf(userRegister.password) }
+    var confirmPassword = remember { mutableStateOf("") }
+    var response_ = remember { mutableStateOf("") }
+    var showDialog by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Text("Логин", style = MaterialTheme.typography.titleMedium)
@@ -184,7 +180,13 @@ fun RegisterForm() {
             verticalArrangement = Arrangement.Bottom
         ) {
             Button(
-                onClick = {  },
+                onClick = {
+                    authService.registerUser(login.value, password.value, email.value) { response ->
+                        println("Registration response: $response")
+                        response_.value = response
+                        showDialog = true
+                    }
+                },
                 modifier = Modifier.fillMaxWidth()
                     .height(70.dp),
                 shape = RoundedCornerShape(20.dp),
@@ -192,6 +194,15 @@ fun RegisterForm() {
             ) {
                 Text("Создать аккаунт")
             }
+        }
+        if (showDialog) {
+            MessageBoxOk(
+                title = "Регистрация",
+                message = "${response_}!",
+                onDismiss = {
+                    showDialog = false
+                }
+            )
         }
     }
 }
