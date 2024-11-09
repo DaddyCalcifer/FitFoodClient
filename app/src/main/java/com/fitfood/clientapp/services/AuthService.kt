@@ -2,6 +2,8 @@ package com.fitfood.clientapp.services
 
 import okhttp3.*
 import com.google.gson.Gson
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
@@ -66,5 +68,17 @@ class AuthService {
             }
         })
     }
+
+    suspend fun checkToken(token: String): Response {
+        val request = Request.Builder()
+            .url("${BASE_URL}user")
+            .addHeader("Authorization", "Bearer $token")
+            .build()
+
+        return withContext(Dispatchers.IO) {
+            client.newCall(request).execute()
+        }
+    }
+
 
 }

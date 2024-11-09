@@ -1,7 +1,11 @@
 package com.fitfood.clientapp
 
 import MainScreen
+import android.content.Context
+import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -31,31 +35,79 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.navigation.NavController
+import androidx.navigation.NavDestination
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.fitfood.clientapp.models.requests.LoginRequest
 import com.fitfood.clientapp.models.requests.RegisterRequest
 import com.fitfood.clientapp.models.responses.ResponseJSON
 import com.fitfood.clientapp.services.AuthService
 import com.fitfood.clientapp.ui.theme.ClientAppTheme
 import com.google.gson.Gson
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
         setContent {
             ClientAppTheme() {
-                AuthScreen()
+                AppNavHost(this@MainActivity, "loading")
             }
+        }
+
+        CoroutineScope(Dispatchers.IO).launch {
+            val isTokenActive = checkJwtToken()
+            val startDestination = if (isTokenActive) "main" else "auth"
+
+            withContext(Dispatchers.Main) {
+                setContent {
+                    ClientAppTheme() {
+                        AppNavHost(this@MainActivity, startDestination)
+                    }
+                }
+            }
+        }
+    }
+    private suspend fun checkJwtToken(): Boolean {
+        val sharedPreferences: SharedPreferences = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        val token = sharedPreferences.getString("jwt", "").toString()
+        Log.e("loging","jwt: (${token})")
+        if(token == "") return false
+        return try {
+            val response = authService.checkToken(token)
+            response.code != 401
+        } catch (e: Exception) {
+            false
         }
     }
 }
 
 var userAuth = LoginRequest()
+var rememberData = LoginRequest()
 var userRegister = RegisterRequest()
 var authService = AuthService()
+var auth_data = ""
 
 @Composable
-fun AuthScreen() {
+fun AppNavHost(context: Context, startDestination: String) {
+    val navController = rememberNavController()
+
+    NavHost(navController = navController, startDestination = startDestination) {
+        composable("loading") { LoadingScreen()}
+        composable("auth") { AuthScreen(navController, context ) }
+        composable("main") { MainScreen(navController, context) }
+    }
+}
+
+@Composable
+fun AuthScreen(navController: NavController?, context: Context?) {
     var isLogin by remember { mutableStateOf(true) }
 
     Column(
@@ -89,7 +141,7 @@ fun AuthScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
         if (isLogin) {
-            LoginForm()
+            LoginForm(navController, context)
         } else {
             RegisterForm()
         }
@@ -97,12 +149,29 @@ fun AuthScreen() {
 }
 
 @Composable
-fun LoginForm() {
+fun LoginForm(navController: NavController?, context: Context?) {
     val login = remember { mutableStateOf(userAuth.login) }
     val password = remember { mutableStateOf(userAuth.password) }
     var jwt = remember { mutableStateOf("") }
     var showDialog by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false)}
+    var filledAlready by remember { mutableStateOf(false)}
 
+    if(context != null) {
+        val sharedPreferences: SharedPreferences =
+            context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        auth_data = sharedPreferences.getString("auth", "").toString()
+    }
+    if(auth_data != "") {
+        rememberData.login = auth_data.split(' ')[0]
+        rememberData.password = auth_data.split(' ')[1]
+    }
+    if(rememberData.login != "" && !filledAlready)
+    {
+        login.value = rememberData.login
+        password.value = rememberData.password
+        filledAlready = true
+    }
     Column(modifier =
     Modifier
         .fillMaxSize()
@@ -131,30 +200,61 @@ fun LoginForm() {
         ) {
             Button(
                 onClick = {
-                    authService.authorizeUser(login.value, password.value) { response ->
-                        println("Authorization response: $response")
+                    if(navController != null && context != null) {
+                        isLoading = true
 
-                        // Парсим JSON-ответ с помощью Gson
-                        val gson = Gson()
-                        val authResponse = gson.fromJson(response, ResponseJSON::class.java)
+                        authService.authorizeUser(login.value, password.value) { response ->
+                            println("Authorization response: $response")
 
-                        // Сохраняем JWT и показываем сообщение
-                        jwt.value = authResponse.value
-                        showDialog = true
+                            val gson = Gson()
+                            val authResponse = gson.fromJson(response, ResponseJSON::class.java)
+
+                            jwt.value = authResponse.message
+                            isLoading = false
+
+                            if (authResponse.value.isNotEmpty()) {
+
+                                val sharedPreferences: SharedPreferences =
+                                    context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                                sharedPreferences.edit()
+                                    .putString("auth", "${login.value} ${password.value}").apply()
+                                sharedPreferences.edit()
+                                    .putString("jwt", authResponse.value).apply()
+
+                                // Переход к MainScreen через NavController
+                                // Переключаемся на главный поток для навигации
+                                (context as? ComponentActivity)?.runOnUiThread {
+                                    navController.navigate("main") {
+                                        popUpTo("auth") { inclusive = true }
+                                    }
+                                }
+                            } else {
+                                showDialog = true
+                            }
+                        }
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                enabled = !isLoading,
+                modifier = Modifier
+                    .fillMaxWidth()
                     .height(70.dp),
                 shape = RoundedCornerShape(20.dp),
                 colors = ButtonDefaults.buttonColors(Color(0xFF5E953B))
             ) {
-                Text("Войти")
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                } else {
+                    Text("Войти")
+                }
             }
         }
         if (showDialog) {
             MessageBoxOk(
                 title = "Вход",
-                message = "JWT ${jwt.value}!",
+                message = "${jwt.value}!",
                 onDismiss = { showDialog = false }
             )
         }
@@ -168,6 +268,7 @@ fun RegisterForm() {
     var confirmPassword = remember { mutableStateOf("") }
     var response_ = remember { mutableStateOf("") }
     var showDialog by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false)}
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Text("Логин", style = MaterialTheme.typography.titleMedium)
@@ -190,6 +291,7 @@ fun RegisterForm() {
         ) {
             Button(
                 onClick = {
+                    isLoading = true
                     authService.registerUser(login.value, password.value, email.value) { response ->
                         println("Registration response: $response")
                         val gson = Gson()
@@ -198,14 +300,24 @@ fun RegisterForm() {
                         // Сохраняем JWT и показываем сообщение
                         response_.value = regResponse.message
                         showDialog = true
+                        isLoading = false
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
                     .height(70.dp),
+                enabled = !isLoading,
                 shape = RoundedCornerShape(20.dp),
                 colors = ButtonDefaults.buttonColors(Color(0xFF5E953B))
             ) {
-                Text("Создать аккаунт")
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                } else {
+                    Text("Создать аккаунт")
+                }
             }
         }
         if (showDialog) {
@@ -217,6 +329,18 @@ fun RegisterForm() {
                 }
             )
         }
+    }
+}
+@Composable
+fun LoadingScreen()
+{
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center){
+        CircularProgressIndicator(
+            color = Color(0xFF5E953B),
+            modifier = Modifier
+                .size(72.dp),
+            strokeWidth = 10.dp
+        )
     }
 }
 
@@ -318,7 +442,7 @@ fun FitButtonImage(text: String,
 @Composable
 fun LoginFormPreview() {
     ClientAppTheme() {
-        AuthScreen();
+        AuthScreen(null, null);
     }
 }
 
