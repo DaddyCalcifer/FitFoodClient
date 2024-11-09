@@ -1,5 +1,6 @@
 package com.fitfood.clientapp
 
+import MainScreen
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -32,8 +33,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import com.fitfood.clientapp.models.requests.LoginRequest
 import com.fitfood.clientapp.models.requests.RegisterRequest
+import com.fitfood.clientapp.models.responses.ResponseJSON
 import com.fitfood.clientapp.services.AuthService
 import com.fitfood.clientapp.ui.theme.ClientAppTheme
+import com.google.gson.Gson
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -130,7 +133,13 @@ fun LoginForm() {
                 onClick = {
                     authService.authorizeUser(login.value, password.value) { response ->
                         println("Authorization response: $response")
-                        jwt.value = response.toString()
+
+                        // Парсим JSON-ответ с помощью Gson
+                        val gson = Gson()
+                        val authResponse = gson.fromJson(response, ResponseJSON::class.java)
+
+                        // Сохраняем JWT и показываем сообщение
+                        jwt.value = authResponse.value
                         showDialog = true
                     }
                 },
@@ -145,7 +154,7 @@ fun LoginForm() {
         if (showDialog) {
             MessageBoxOk(
                 title = "Вход",
-                message = "JWT ${jwt}!",
+                message = "JWT ${jwt.value}!",
                 onDismiss = { showDialog = false }
             )
         }
@@ -183,7 +192,11 @@ fun RegisterForm() {
                 onClick = {
                     authService.registerUser(login.value, password.value, email.value) { response ->
                         println("Registration response: $response")
-                        response_.value = response
+                        val gson = Gson()
+                        val regResponse = gson.fromJson(response, ResponseJSON::class.java)
+
+                        // Сохраняем JWT и показываем сообщение
+                        response_.value = regResponse.message
                         showDialog = true
                     }
                 },
@@ -198,7 +211,7 @@ fun RegisterForm() {
         if (showDialog) {
             MessageBoxOk(
                 title = "Регистрация",
-                message = "${response_}!",
+                message = "${response_.value}!",
                 onDismiss = {
                     showDialog = false
                 }

@@ -65,28 +65,31 @@ val fitPlan = FoodPlan();
 
 @Composable
 fun NutritionSummaryScreen(plan: FoodPlan) {
-    Column(
+    LazyColumn (
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
         // Заголовок
-        Text(
-            text = "Сегодня",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(vertical = 10.dp)
-        )
+        item {
+            Text(
+                text = "Сегодня",
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.padding(vertical = 10.dp)
+            )
 
-        // Сводка калорий и диаграмма
-        SummaryCard(plan)
+            // Сводка калорий и диаграмма
+            SummaryCard(plan)
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
-        // Приемы пищи
-        MealsSection(plan)
+        item {
+            // Приемы пищи
+            MealsSection(plan)
 
-        Spacer(modifier = Modifier.height(16.dp))
-
+            Spacer(modifier = Modifier.height(16.dp))
+        }
         // Нижняя навигационная панель
         // BottomNavigationBar()
     }
@@ -140,6 +143,9 @@ fun CalorieInfo(value: String, label: String) {
 
 @Composable
 fun MacronutrientsColumn(plan: FoodPlan) {
+    if(plan.Protein_g <=0) plan.Protein_g = 1.0;
+    if(plan.Fat_g <=0) plan.Fat_g = 1.0;
+    if(plan.Carb_g <=0) plan.Carb_g = 1.0;
     Column(
         modifier = Modifier
             .padding(16.dp),
