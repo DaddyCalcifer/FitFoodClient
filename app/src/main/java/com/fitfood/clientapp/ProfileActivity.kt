@@ -1,6 +1,8 @@
 package com.fitfood.clientapp
 
 import FitDataForm
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -60,10 +62,16 @@ import com.fitfood.clientapp.models.FitData
 import com.fitfood.clientapp.models.FitPlan
 import com.fitfood.clientapp.models.Gender
 import com.fitfood.clientapp.models.User
+import com.fitfood.clientapp.services.DataService
+
+val dataService = DataService()
 
 @Composable
-fun ParametersScreen(user: User) {
+fun ParametersScreen(user: User, context: Context?, onAddedData: () -> Unit) {
     var isAddingData by remember { mutableStateOf(false) }
+    var fitData by remember { mutableStateOf<FitData?>(null) }
+    var responseSuccess by remember { mutableStateOf<Boolean?>(null) }
+
     if(!isAddingData) {
         Column(
             modifier = Modifier
@@ -109,7 +117,20 @@ fun ParametersScreen(user: User) {
     }
     else
     {
-        FitDataForm(onCancel = {isAddingData = false}, onSubmit = {})
+        if(context!= null) {
+            val sharedPreferences: SharedPreferences =
+                context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+            val token = sharedPreferences.getString("jwt", "").toString()
+            FitDataForm(onCancel = { isAddingData = false },
+                onSubmit = { data ->
+                    fitData = data
+                    dataService.sendFitData(data, token) { success ->
+                        responseSuccess = success
+                    }
+                    isAddingData = false
+                    onAddedData()
+                })
+        }
     }
 }
 

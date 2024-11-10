@@ -70,7 +70,7 @@ fun MainScreen(navController: NavController?, context: Context?) {
         ) {
             when (selectedScreen) {
                 is Screen.Profile -> ProfileScreen(navController, context)
-                is Screen.PhysicalData -> PhysicalDataScreen(context)
+                is Screen.PhysicalData -> PhysicalDataScreen(context, {})
                 is Screen.Nutrition -> NutritionScreen()
                 else -> {}
             }
@@ -179,7 +179,7 @@ fun FitDataForm(onSubmit: (FitData) -> Unit, onCancel: () -> Unit) {
                 TextField(
                     value = height,
                     onValueChange = {
-                        if (it.toIntOrNull() in 140..210) height = it
+                        if (it.all { char -> char.isDigit() }) height = it
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier
@@ -200,7 +200,7 @@ fun FitDataForm(onSubmit: (FitData) -> Unit, onCancel: () -> Unit) {
                 TextField(
                     value = age,
                     onValueChange = {
-                        if (it.toIntOrNull() in 14..65) age = it
+                        if (it.all { char -> char.isDigit() }) age = it
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier
@@ -337,7 +337,7 @@ fun GenderButton(selected: Boolean, text: String, icon: ImageVector, onClick: ()
 }
 
 @Composable
-fun PhysicalDataScreen(context: Context?) {
+fun PhysicalDataScreen(context: Context?, onAddedData: ()-> Unit) {
     var user by remember { mutableStateOf<User?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     val coroutineScope = rememberCoroutineScope()
@@ -359,7 +359,7 @@ fun PhysicalDataScreen(context: Context?) {
             LoadingScreen()
         } else {
             user?.let {
-                ParametersScreen(it)
+                ParametersScreen(it, context, onAddedData)
             } ?: run {
                 Text("Ошибка загрузки данных")
             }
