@@ -1,6 +1,6 @@
 package com.fitfood.clientapp.models;
 
-public class FoodPlan {
+public class FitPlan {
     public double DayKcal = 0.0;
     public int DurationInDays = 0;
     public double WaterMl = 0.0;

@@ -1,15 +1,19 @@
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,16 +23,26 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Balance
+import androidx.compose.material.icons.filled.CoPresent
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.Female
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Male
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.navigation.NavController
+import com.fitfood.clientapp.LoadingScreen
 import com.fitfood.clientapp.NutritionSummaryScreen
-import com.fitfood.clientapp.authService
-import com.fitfood.clientapp.fitPlan
-import com.fitfood.clientapp.models.FoodPlan
-import com.fitfood.clientapp.models.responses.ResponseJSON
-import com.google.gson.Gson
+import com.fitfood.clientapp.ParametersScreen
+import com.fitfood.clientapp.models.ActivityType
+import com.fitfood.clientapp.models.FitData
+import com.fitfood.clientapp.models.FitPlan
+import com.fitfood.clientapp.models.Gender
+import com.fitfood.clientapp.models.User
+import com.fitfood.clientapp.services.DataService
+import kotlinx.coroutines.launch
 
 sealed class Screen(val title: String, val icon: ImageVector) {
     object PhysicalData : Screen("Параметры", Icons.Filled.FitnessCenter)
@@ -36,9 +50,11 @@ sealed class Screen(val title: String, val icon: ImageVector) {
     object Profile : Screen("Профиль", Icons.Filled.AccountCircle)
 }
 
+val dataService = DataService()
+
 @Composable
 fun MainScreen(navController: NavController?, context: Context?) {
-    var selectedScreen by remember { mutableStateOf<Screen>(Screen.Profile) }
+    var selectedScreen by remember { mutableStateOf<Screen>(Screen.PhysicalData) }
 
     Scaffold(
         bottomBar = {
@@ -54,7 +70,7 @@ fun MainScreen(navController: NavController?, context: Context?) {
         ) {
             when (selectedScreen) {
                 is Screen.Profile -> ProfileScreen(navController, context)
-                is Screen.PhysicalData -> PhysicalDataScreen()
+                is Screen.PhysicalData -> PhysicalDataScreen(context)
                 is Screen.Nutrition -> NutritionScreen()
                 else -> {}
             }
@@ -121,15 +137,239 @@ fun ProfileScreen(navController: NavController?, context: Context?) {
 }
 
 @Composable
-fun PhysicalDataScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = "Physical Data Screen")
+fun FitDataForm(onSubmit: (FitData) -> Unit, onCancel: () -> Unit) {
+    var currentStep by remember { mutableStateOf(0) }
+    var weight by remember { mutableStateOf("") }
+    var height by remember { mutableStateOf("") }
+    var age by remember { mutableStateOf("") }
+    var gender by remember { mutableStateOf(1) }
+    var activity by remember { mutableStateOf(0) }
+
+    Column(modifier = Modifier
+        .padding(16.dp)
+        .fillMaxSize(),
+        verticalArrangement = Arrangement.SpaceBetween,
+        horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = "Добавление данных",
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        when (currentStep) {
+            0 -> {
+                TextField(
+                    value = weight,
+                    onValueChange = { if (it.all { char -> char.isDigit() }) weight = it },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    label = { Text("Введите ваш вес (кг)") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(20.dp),
+                    leadingIcon = {Icon(imageVector = Icons.Filled.Balance,
+                        contentDescription = "Icon")},
+                    colors = TextFieldDefaults.colors(
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent
+                    )
+                )
+            }
+            1 -> {
+                TextField(
+                    value = height,
+                    onValueChange = {
+                        if (it.toIntOrNull() in 140..210) height = it
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    label = { Text("Введите ваш рост (см)") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(20.dp),
+                    leadingIcon = {Icon(imageVector = Icons.Filled.CoPresent,
+                        contentDescription = "Icon")},
+                    colors = TextFieldDefaults.colors(
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent
+                    )
+                )
+            }
+            2 -> {
+                TextField(
+                    value = age,
+                    onValueChange = {
+                        if (it.toIntOrNull() in 14..65) age = it
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    label = { Text("Введите ваш возраст (от 14 до 65)") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(20.dp),
+                    leadingIcon = {Icon(imageVector = Icons.Filled.Face,
+                        contentDescription = "Icon")},
+                    colors = TextFieldDefaults.colors(
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent
+                    )
+                )
+            }
+            3 -> {
+                Text("Ваш пол")
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    GenderButton(
+                        selected = gender == 1,
+                        text = "Мужчина",
+                        icon = Icons.Default.Male,
+                        onClick = { gender = 1 }
+                    )
+                    GenderButton(
+                        selected = gender == 0,
+                        text = "Женщина",
+                        icon = Icons.Default.Female,
+                        onClick = { gender = 0 }
+                    )
+                }
+            }
+            4 -> {
+                Text("Ваш уровень физической активности", style = MaterialTheme.typography.headlineSmall)
+                Spacer(Modifier.height(10.dp))
+                Text("Где 1 - отсутствие активности, 5 - экстремальные нагрузки",
+                    style = MaterialTheme.typography.bodyLarge)
+                Spacer(Modifier.height(10.dp))
+                Text("(людям с малоактивным образом жизни рекомендуется выбирать 1)",
+                    style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(15.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    ActivityType.entries.forEach { level ->
+                        Button(onClick = { activity = level.lvl },
+                            modifier = Modifier
+                                .width(60.dp)
+                                .height(60.dp),
+                            shape = RoundedCornerShape(30.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                if (activity == level.lvl) Color(0xFF5E953B)
+                                else Color.Gray
+                            )
+                        )
+                        {
+                                Text((level.lvl+1).toString(), style = MaterialTheme.typography.headlineSmall)
+                        }
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(26.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            if (currentStep == 0) {
+                Button(
+                    onClick = onCancel,
+                    modifier = Modifier
+                        .fillMaxWidth(0.5f)
+                        .height(40.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(Color(0xFF5E953B))
+                )
+                { Text("Отмена") }
+            }
+            if (currentStep > 0) {
+                Button(
+                    onClick = { currentStep -= 1 },
+                    modifier = Modifier
+                        .fillMaxWidth(0.5f)
+                        .height(40.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(Color(0xFF5E953B))
+                )
+                { Text("Назад") }
+            }
+            if (currentStep < 4) {
+                Button(
+                    onClick = { currentStep += 1 },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(40.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(Color(0xFF5E953B))
+                )
+                { Text("Далее") }
+            } else {
+                Button(
+                    onClick = {
+                        val fitData = FitData(
+                            weight = weight.toFloatOrNull() ?: 0f,
+                            height = height.toFloatOrNull() ?: 0f,
+                            age = age.toIntOrNull() ?: 0,
+                            gender = gender,
+                            activity = activity
+                        )
+                        onSubmit(fitData)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .height(40.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(Color(0xFF5E953B))
+                ) { Text("Сохранить") }
+            }
+        }
+    }
+}
+@Composable
+fun GenderButton(selected: Boolean, text: String, icon: ImageVector, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults.buttonColors(
+            if (selected) Color(0xFF5E953B) else Color.Gray
+        ),
+        modifier = Modifier
+            .padding(4.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(imageVector = icon, contentDescription = null, tint = Color.White)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text, style = MaterialTheme.typography.headlineSmall)
+        }
+    }
+}
+
+@Composable
+fun PhysicalDataScreen(context: Context?) {
+    var user by remember { mutableStateOf<User?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    val coroutineScope = rememberCoroutineScope()
+
+    if(context!= null) {
+        val sharedPreferences: SharedPreferences =
+            context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        val token = sharedPreferences.getString("jwt", "").toString()
+
+        LaunchedEffect(Unit) {
+            coroutineScope.launch {
+                user = dataService.fetchUser(token)
+                user?.let { Log.e("user", it.username) }
+                isLoading = false
+            }
+        }
+
+        if (isLoading) {
+            LoadingScreen()
+        } else {
+            user?.let {
+                ParametersScreen(it)
+            } ?: run {
+                Text("Ошибка загрузки данных")
+            }
+        }
     }
 }
 
 @Composable
 fun NutritionScreen() {
-    val fitPlan = FoodPlan();
+    val fitPlan = FitPlan();
     com.fitfood.clientapp.fitPlan.DayKcal = 3000.0;
     com.fitfood.clientapp.fitPlan.AteKcal = 1252.0;
     com.fitfood.clientapp.fitPlan.Carb_g = 240.0;
@@ -146,4 +386,5 @@ fun NutritionScreen() {
 @Composable
 fun MainScreenPreview() {
     MainScreen(null, null)
+    //FitDataForm {  }
 }

@@ -56,11 +56,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        setContent {
-            ClientAppTheme() {
-                AppNavHost(this@MainActivity, "loading")
-            }
-        }
+        //setContent {
+        //    ClientAppTheme() {
+        //        AppNavHost(this@MainActivity, "loading")
+        //    }
+        //}
 
         CoroutineScope(Dispatchers.IO).launch {
             val isTokenActive = checkJwtToken()
@@ -217,7 +217,7 @@ fun LoginForm(navController: NavController?, context: Context?) {
                                 val sharedPreferences: SharedPreferences =
                                     context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
                                 sharedPreferences.edit()
-                                    .putString("auth", "${login.value} ${password.value}").apply()
+                                    .putString("auth", "${login.value} ${password.value}")
                                 sharedPreferences.edit()
                                     .putString("jwt", authResponse.value).apply()
 

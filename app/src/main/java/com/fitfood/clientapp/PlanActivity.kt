@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,13 +19,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Blender
 import androidx.compose.material.icons.filled.DinnerDining
-import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.FoodBank
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.LocalPizza
@@ -47,7 +41,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
-import com.fitfood.clientapp.models.FoodPlan
+import com.fitfood.clientapp.models.FitPlan
 
 class PlanActivity: ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,10 +55,10 @@ class PlanActivity: ComponentActivity() {
     }
 }
 
-val fitPlan = FoodPlan();
+val fitPlan = FitPlan();
 
 @Composable
-fun NutritionSummaryScreen(plan: FoodPlan) {
+fun NutritionSummaryScreen(plan: FitPlan) {
     LazyColumn (
         modifier = Modifier
             .fillMaxSize()
@@ -96,7 +90,7 @@ fun NutritionSummaryScreen(plan: FoodPlan) {
 }
 
 @Composable
-fun SummaryCard(plan: FoodPlan) {
+fun SummaryCard(plan: FitPlan) {
     val remainingKcal = plan.DayKcal - plan.AteKcal;
     Card(
         modifier = Modifier
@@ -142,7 +136,7 @@ fun CalorieInfo(value: String, label: String) {
 }
 
 @Composable
-fun MacronutrientsColumn(plan: FoodPlan) {
+fun MacronutrientsColumn(plan: FitPlan) {
     if(plan.Protein_g <=0) plan.Protein_g = 1.0;
     if(plan.Fat_g <=0) plan.Fat_g = 1.0;
     if(plan.Carb_g <=0) plan.Carb_g = 1.0;
@@ -190,7 +184,7 @@ fun MacronutrientInfo(label: String, value: String, color: Color, progress: Floa
 }
 
 @Composable
-fun CircularCaloriesChart(plan: FoodPlan) {
+fun CircularCaloriesChart(plan: FitPlan) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
@@ -226,7 +220,7 @@ fun CircularCaloriesChart(plan: FoodPlan) {
 }
 
 @Composable
-fun MealsSection(plan: FoodPlan) {
+fun MealsSection(plan: FitPlan) {
     Column(modifier = Modifier
         .fillMaxWidth()) {
         MealRow("Завтрак", "${plan.AteBreakfast.toInt()} / ${plan.BreakfastKcal.toInt()} Ккал", Icons.Default.Blender)
