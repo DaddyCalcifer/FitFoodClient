@@ -4,6 +4,7 @@ import FitDataForm
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -26,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessibilityNew
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArtTrack
 import androidx.compose.material.icons.filled.Blender
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DinnerDining
@@ -60,89 +62,305 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.fitfood.clientapp.models.FitData
 import com.fitfood.clientapp.models.FitPlan
+import com.fitfood.clientapp.models.FitPlanLite
 import com.fitfood.clientapp.models.Gender
 import com.fitfood.clientapp.models.User
 import com.fitfood.clientapp.services.DataService
+import java.util.UUID
 
 val dataService = DataService()
 
 @Composable
-fun ParametersScreen(user: User, context: Context?, onAddedData: () -> Unit) {
+fun ParametersScreen(
+    user: User,
+    context: Context?,
+    onAddedData: () -> Unit,
+    onBack: () -> Unit,
+    drawAsTool: Boolean = false
+) {
     var isAddingData by remember { mutableStateOf(false) }
+    var isAddingPlan by remember { mutableStateOf(false) }
     var fitData by remember { mutableStateOf<FitData?>(null) }
     var responseSuccess by remember { mutableStateOf<Boolean?>(null) }
+    var selectedFitDataId by remember { mutableStateOf<UUID?>(null) }
 
-    if(!isAddingData) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
-            Text(
-                text = "Ваши данные",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+    if(context!= null) {
+        val sharedPreferences: SharedPreferences =
+            context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        val token = sharedPreferences.getString("jwt", "").toString()
 
-            LazyColumn {
-                items(user.datas) { data ->
-                    UserDataItem(data)
+        if (!isAddingData) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "Ваши данные",
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                if(!isAddingPlan) {
+                    LazyColumn {
+                        items(user.datas) { data ->
+                            val itemModifier = if (drawAsTool) {
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                                    .background(
+                                        Color(0x18315A16),
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
+                                    .clickable {
+                                        selectedFitDataId = data.id
+                                        isAddingPlan = true
+                                    }
+                                    .padding(16.dp)
+                            } else {
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                                    .background(
+                                        Color(0x18315A16),
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
+                                    .padding(16.dp)
+                            }
+
+                            UserDataItem(data, modifier = itemModifier)
+                        }
+
+                        item {
+                            Spacer(Modifier.height(10.dp))
+                            Button(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(70.dp),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
+                                onClick = { isAddingData = true }
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                    Text("Добавить")
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(32.dp),
+                                        tint = Color.Transparent
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
-                item {
-                    Button(modifier = Modifier
-                        .fillMaxWidth()
-                        .height(70.dp),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
-                        onClick = {isAddingData = true})
-                    {
-                        Row(modifier = Modifier.
-                            fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween)
-                        {
-                            Icon(imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                modifier = Modifier.size(32.dp))
-                            Text("Добавить")
-                            Icon(imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                modifier = Modifier.size(32.dp),
-                                tint = Color.Transparent)
+                else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        verticalArrangement = Arrangement.SpaceBetween,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Построение плана питания",
+                            style = MaterialTheme.typography.headlineMedium,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Я хочу...",
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(8.dp)
+                            )
+                            Spacer(Modifier.height(10.dp))
+                            Button(modifier = Modifier
+                                .fillMaxWidth(0.8f)
+                                .height(70.dp),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
+                                onClick = {
+                                dataService.sendGeneratePlanRequest(
+                                    selectedFitDataId,
+                                    0,
+                                    token,
+                                    context
+                                )
+                                isAddingPlan = false
+                                onBack()
+                            }) {
+                                Text("Сбросить вес", style = MaterialTheme.typography.headlineSmall)
+                            }
+                            Spacer(Modifier.height(10.dp))
+                            Button(modifier = Modifier
+                                .fillMaxWidth(0.8f)
+                                .height(70.dp),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
+                                onClick = {
+                                dataService.sendGeneratePlanRequest(
+                                    selectedFitDataId,
+                                    1,
+                                    token,
+                                    context
+                                )
+                                isAddingPlan = false
+                                    onBack()
+                            }) {
+                                Text("Поддерживать вес", style = MaterialTheme.typography.headlineSmall)
+                            }
+                            Spacer(Modifier.height(10.dp))
+                            Button(modifier = Modifier
+                                .fillMaxWidth(0.8f)
+                                .height(70.dp),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
+                                onClick = {
+                                dataService.sendGeneratePlanRequest(
+                                    selectedFitDataId,
+                                    2,
+                                    token,
+                                    context
+                                )
+                                isAddingPlan = false
+                                    onBack()
+                            }) {
+                                Text("Набрать вес", style = MaterialTheme.typography.headlineSmall)
+                            }
+                            Spacer(Modifier.height(40.dp))
+                            Button(modifier = Modifier
+                                .fillMaxWidth(0.8f)
+                                .height(70.dp),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = ButtonDefaults.buttonColors(Color(0x18315A16)),
+                                onClick = { isAddingPlan = false
+                                onBack()}) {
+                                Text("Назад", style = MaterialTheme.typography.headlineSmall)
+                            }
                         }
                     }
                 }
             }
-        }
-    }
-    else
-    {
-        if(context!= null) {
-            val sharedPreferences: SharedPreferences =
-                context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-            val token = sharedPreferences.getString("jwt", "").toString()
-            FitDataForm(onCancel = { isAddingData = false },
+        } else {
+
+            FitDataForm(
+                onCancel = { isAddingData = false },
                 onSubmit = { data ->
                     fitData = data
                     dataService.sendFitData(data, token) { success ->
                         responseSuccess = success
+                        if (success) {
+                            onAddedData() // Обновляем данные после успешного добавления
+                            isAddingData = false
+                        }
                     }
-                    isAddingData = false
-                    onAddedData()
-                })
+                }
+            )
         }
     }
 }
 
 @Composable
-fun UserDataItem(data: FitData) {
+fun PlansScreen(
+    user: User,
+    context: Context?,
+    onAddedData: () -> Unit
+) {
+    var isAddingPlan by remember { mutableStateOf(false) }
+    var isInPlan by remember { mutableStateOf(false) }
+    var selectedPlan by remember { mutableStateOf<FitPlanLite?>(null) }
+
+    if(context!= null) {
+        if (!isInPlan) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "Ваши планы питания",
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                if(!isAddingPlan) {
+                    LazyColumn {
+                        items(user.plans) { plan ->
+                            val itemModifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                                    .background(
+                                        Color(0x18315A16),
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
+                                    .clickable {
+                                        selectedPlan = plan
+                                        isInPlan = true
+                                    }
+                                    .padding(16.dp)
+                            Log.e("plan", "${plan.dayKcal} + ${plan.waterMl}")
+                            UserPlanItem(plan, modifier = itemModifier)
+                        }
+
+                        item {
+                            Spacer(Modifier.height(10.dp))
+                            Button(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(70.dp),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
+                                onClick = { isAddingPlan = true }
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                    Text("Построить план")
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(32.dp),
+                                        tint = Color.Transparent
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                else {
+                    ParametersScreen(user, context, onAddedData, {isAddingPlan = false}, true)
+                }
+            }
+        } else {
+            NutritionSummaryScreenLite(plan = selectedPlan)
+        }
+    }
+}
+
+@Composable
+fun UserDataItem(data: FitData, modifier: Modifier) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .background(Color(0x18315A16), shape = RoundedCornerShape(20.dp))
-            .clickable { /* Обработать нажатие */ }
-            .padding(16.dp),
+        modifier,
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceAround
     ) {
@@ -164,13 +382,28 @@ fun UserDataItem(data: FitData) {
             Text(text = "Возраст: ${data.age} лет", style = MaterialTheme.typography.bodyLarge)
             Text(text = "Активность: ${data.activity}", style = MaterialTheme.typography.bodyLarge)
         }
-        //Column() {
-        //    Icon(
-        //        imageVector = Icons.Filled.Delete,
-        //        contentDescription = null,
-        //        modifier = Modifier.size(50.dp),
-        //        tint = Color.Red
-        //    )
-        //}
+    }
+}
+@Composable
+fun UserPlanItem(plan: FitPlanLite, modifier: Modifier) {
+    Row(
+        modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceAround
+    ) {
+        // Иконка или эмодзи для каждого параметра
+        Icon(
+            imageVector = Icons.Filled.ArtTrack,
+            contentDescription = null,
+            modifier = Modifier.size(50.dp),
+            tint = Color(0xFF1A300c)
+        )
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column {
+            Text(text = "Пища: ${plan.dayKcal} ккал", style = MaterialTheme.typography.bodyLarge)
+            Text(text = "Вода: ${plan.waterMl} мл", style = MaterialTheme.typography.bodyLarge)
+        }
     }
 }

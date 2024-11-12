@@ -36,6 +36,7 @@ import androidx.navigation.NavController
 import com.fitfood.clientapp.LoadingScreen
 import com.fitfood.clientapp.NutritionSummaryScreen
 import com.fitfood.clientapp.ParametersScreen
+import com.fitfood.clientapp.PlansScreen
 import com.fitfood.clientapp.models.ActivityType
 import com.fitfood.clientapp.models.FitData
 import com.fitfood.clientapp.models.FitPlan
@@ -70,8 +71,8 @@ fun MainScreen(navController: NavController?, context: Context?) {
         ) {
             when (selectedScreen) {
                 is Screen.Profile -> ProfileScreen(navController, context)
-                is Screen.PhysicalData -> PhysicalDataScreen(context, {})
-                is Screen.Nutrition -> NutritionScreen()
+                is Screen.PhysicalData -> PhysicalDataScreen(context)
+                is Screen.Nutrition -> NutritionScreen(context)
                 else -> {}
             }
         }
@@ -337,29 +338,32 @@ fun GenderButton(selected: Boolean, text: String, icon: ImageVector, onClick: ()
 }
 
 @Composable
-fun PhysicalDataScreen(context: Context?, onAddedData: ()-> Unit) {
-    var user by remember { mutableStateOf<User?>(null) }
+fun PhysicalDataScreen(context: Context?) {
     var isLoading by remember { mutableStateOf(true) }
     val coroutineScope = rememberCoroutineScope()
+    var user by remember { mutableStateOf<User?>(null) }
 
-    if(context!= null) {
+    if (context != null) {
         val sharedPreferences: SharedPreferences =
             context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
         val token = sharedPreferences.getString("jwt", "").toString()
 
-        LaunchedEffect(Unit) {
+        fun refreshUser() {
             coroutineScope.launch {
                 user = dataService.fetchUser(token)
-                user?.let { Log.e("user", it.username) }
                 isLoading = false
             }
+        }
+
+        LaunchedEffect(Unit) {
+            refreshUser()
         }
 
         if (isLoading) {
             LoadingScreen()
         } else {
             user?.let {
-                ParametersScreen(it, context, onAddedData)
+                ParametersScreen(it, context, {refreshUser()}, {})
             } ?: run {
                 Text("Ошибка загрузки данных")
             }
@@ -368,18 +372,37 @@ fun PhysicalDataScreen(context: Context?, onAddedData: ()-> Unit) {
 }
 
 @Composable
-fun NutritionScreen() {
-    val fitPlan = FitPlan();
-    com.fitfood.clientapp.fitPlan.DayKcal = 3000.0;
-    com.fitfood.clientapp.fitPlan.AteKcal = 1252.0;
-    com.fitfood.clientapp.fitPlan.Carb_g = 240.0;
-    com.fitfood.clientapp.fitPlan.Protein_g = 80.0;
-    com.fitfood.clientapp.fitPlan.Fat_g = 80.0;
-    com.fitfood.clientapp.fitPlan.BreakfastKcal = 900.0;
-    com.fitfood.clientapp.fitPlan.LunchKcal = 1200.0;
-    com.fitfood.clientapp.fitPlan.DinnerKcal = 900.0;
+fun NutritionScreen(context: Context?) {
+    var isLoading by remember { mutableStateOf(true) }
+    val coroutineScope = rememberCoroutineScope()
+    var user by remember { mutableStateOf<User?>(null) }
 
-    NutritionSummaryScreen(fitPlan);
+    if (context != null) {
+        val sharedPreferences: SharedPreferences =
+            context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        val token = sharedPreferences.getString("jwt", "").toString()
+
+        fun refreshUser() {
+            coroutineScope.launch {
+                user = dataService.fetchUser(token)
+                isLoading = false
+            }
+        }
+
+        LaunchedEffect(Unit) {
+            refreshUser()
+        }
+
+        if (isLoading) {
+            LoadingScreen()
+        } else {
+            user?.let {
+                PlansScreen (it, context) { refreshUser() }
+            } ?: run {
+                Text("Ошибка загрузки данных")
+            }
+        }
+    }
 }
 
 @Preview(showBackground = true)
