@@ -60,9 +60,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import com.fitfood.clientapp.models.FeedTotalStats
 import com.fitfood.clientapp.models.FitData
 import com.fitfood.clientapp.models.FitPlan
-import com.fitfood.clientapp.models.FitPlanLite
 import com.fitfood.clientapp.models.Gender
 import com.fitfood.clientapp.models.User
 import com.fitfood.clientapp.services.DataService
@@ -275,12 +275,13 @@ fun ParametersScreen(
 @Composable
 fun PlansScreen(
     user: User,
+    stats: FeedTotalStats,
     context: Context?,
     onAddedData: () -> Unit
 ) {
     var isAddingPlan by remember { mutableStateOf(false) }
     var isInPlan by remember { mutableStateOf(false) }
-    var selectedPlan by remember { mutableStateOf<FitPlanLite?>(null) }
+    var selectedPlan by remember { mutableStateOf<FitPlan?>(null) }
 
     if(context!= null) {
         if (!isInPlan) {
@@ -352,7 +353,7 @@ fun PlansScreen(
                 }
             }
         } else {
-            NutritionSummaryScreenLite(plan = selectedPlan)
+            selectedPlan?.let { NutritionSummaryScreen(plan = it, stats) }
         }
     }
 }
@@ -385,7 +386,7 @@ fun UserDataItem(data: FitData, modifier: Modifier) {
     }
 }
 @Composable
-fun UserPlanItem(plan: FitPlanLite, modifier: Modifier) {
+fun UserPlanItem(plan: FitPlan, modifier: Modifier) {
     Row(
         modifier,
         verticalAlignment = Alignment.CenterVertically,

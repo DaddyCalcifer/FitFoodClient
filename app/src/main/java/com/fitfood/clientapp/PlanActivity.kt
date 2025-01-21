@@ -41,6 +41,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
+import com.fitfood.clientapp.models.FeedTotalStats
 import com.fitfood.clientapp.models.FitPlan
 
 class PlanActivity: ComponentActivity() {
@@ -56,9 +57,10 @@ class PlanActivity: ComponentActivity() {
 }
 
 private val fitPlan = FitPlan();
+private val feedStats = FeedTotalStats();
 
 @Composable
-fun NutritionSummaryScreen(plan: FitPlan) {
+fun NutritionSummaryScreen(plan: FitPlan, stats: FeedTotalStats) {
     LazyColumn (
         modifier = Modifier
             .fillMaxSize()
@@ -73,14 +75,14 @@ fun NutritionSummaryScreen(plan: FitPlan) {
             )
 
             // Сводка калорий и диаграмма
-            SummaryCard(plan)
+            SummaryCard(plan,stats)
 
             Spacer(modifier = Modifier.height(16.dp))
         }
 
         item {
             // Приемы пищи
-            MealsSection(plan)
+            MealsSection(plan,stats)
 
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -90,8 +92,8 @@ fun NutritionSummaryScreen(plan: FitPlan) {
 }
 
 @Composable
-fun SummaryCard(plan: FitPlan) {
-    val remainingKcal = plan.DayKcal - plan.AteKcal;
+fun SummaryCard(plan: FitPlan, stats: FeedTotalStats) {
+    val remainingKcal = plan.dayKcal - stats.ateKcal;
     Card(
         modifier = Modifier
             .fillMaxWidth(),
@@ -110,8 +112,8 @@ fun SummaryCard(plan: FitPlan) {
                 horizontalArrangement = Arrangement.Start,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                CircularCaloriesChart(plan)
-                MacronutrientsColumn(plan)
+                CircularCaloriesChart(plan,stats)
+                MacronutrientsColumn(plan,stats)
             }
             Row(
                 modifier = Modifier
@@ -119,9 +121,9 @@ fun SummaryCard(plan: FitPlan) {
                     .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
-                CalorieInfo("\uD83D\uDE0B ${plan.AteKcal.toInt()}", "Съедено")
+                CalorieInfo("\uD83D\uDE0B ${stats.ateKcal.toInt()}", "Съедено")
                 CalorieInfo("\uD83E\uDD0F ${remainingKcal.toInt()}", "Осталось")
-                CalorieInfo("\uD83D\uDD25 ${plan.burntKcal.toInt()}", "Сожжено")
+                CalorieInfo("\uD83D\uDD25 ${stats.burntKcal.toInt()}", "Сожжено")
             }
         }
     }
@@ -136,31 +138,31 @@ fun CalorieInfo(value: String, label: String) {
 }
 
 @Composable
-fun MacronutrientsColumn(plan: FitPlan) {
-    if(plan.Protein_g <=0) plan.Protein_g = 1.0;
-    if(plan.Fat_g <=0) plan.Fat_g = 1.0;
-    if(plan.Carb_g <=0) plan.Carb_g = 1.0;
+fun MacronutrientsColumn(plan: FitPlan, stats: FeedTotalStats) {
+    if(plan.protein_g <=0) plan.protein_g = 1.0;
+    if(plan.fat_g <=0) plan.fat_g = 1.0;
+    if(plan.carb_g <=0) plan.carb_g = 1.0;
     Column(
         modifier = Modifier
             .padding(16.dp),
         verticalArrangement = Arrangement.SpaceAround
     ) {
         MacronutrientInfo("\uD83E\uDD69\t\tБелки",
-            "${plan.AteProtein.toInt()} /  ${plan.Protein_g.toInt()} г",
+            "${stats.ateProtein.toInt()} /  ${plan.protein_g.toInt()} г",
             Color(0xFF488521),
-            (plan.AteProtein.toInt() /  plan.Protein_g.toInt()).toFloat())
+            (stats.ateProtein.toInt() /  plan.protein_g.toInt()).toFloat())
         Spacer(Modifier.height(15.dp))
 
         MacronutrientInfo("\uD83C\uDF54\t\tЖиры",
-            "${plan.AteFat.toInt()} /  ${plan.Fat_g.toInt()} г",
+            "${stats.ateFat.toInt()} /  ${plan.fat_g.toInt()} г",
             Color(0xFFf7b520),
-            (plan.AteFat /  plan.Fat_g).toFloat())
+            (stats.ateFat /  plan.fat_g).toFloat())
         Spacer(Modifier.height(15.dp))
 
         MacronutrientInfo("\uD83C\uDF5E\t\tУглеводы",
-            "${plan.AteCarb.toInt()} /  ${plan.Carb_g.toInt()} г",
+            "${stats.ateCarb.toInt()} /  ${plan.carb_g.toInt()} г",
             Color(0xFF1ba5cc),
-            (plan.AteCarb /  plan.Carb_g).toFloat())
+            (stats.ateCarb /  plan.carb_g).toFloat())
     }
 }
 
@@ -184,7 +186,7 @@ fun MacronutrientInfo(label: String, value: String, color: Color, progress: Floa
 }
 
 @Composable
-fun CircularCaloriesChart(plan: FitPlan) {
+fun CircularCaloriesChart(plan: FitPlan, stats: FeedTotalStats) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
@@ -193,7 +195,7 @@ fun CircularCaloriesChart(plan: FitPlan) {
     ) {
         CircularProgressIndicator(
             progress = {
-                (plan.AteKcal / plan.DayKcal).toFloat()
+                (stats.ateKcal / plan.dayKcal).toFloat()
             },
             strokeWidth = 16.dp,
             modifier = Modifier
@@ -204,11 +206,11 @@ fun CircularCaloriesChart(plan: FitPlan) {
         )
         Column (horizontalAlignment = Alignment.CenterHorizontally){
             Text(
-                text = "${plan.AteKcal.toInt()}",
+                text = "${stats.ateKcal.toInt()}",
                 style = MaterialTheme.typography.headlineLarge
             )
             Text(
-                text = "/ ${plan.DayKcal.toInt()}",
+                text = "/ ${plan.dayKcal.toInt()}",
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
@@ -220,16 +222,16 @@ fun CircularCaloriesChart(plan: FitPlan) {
 }
 
 @Composable
-fun MealsSection(plan: FitPlan) {
+fun MealsSection(plan: FitPlan, stats: FeedTotalStats) {
     Column(modifier = Modifier
         .fillMaxWidth()) {
-        MealRow("Завтрак", "${plan.AteBreakfast.toInt()} / ${plan.BreakfastKcal.toInt()} Ккал", Icons.Default.Blender)
+        MealRow("Завтрак", "${stats.ateBreakfast.toInt()} / ${plan.breakfastKcal.toInt()} Ккал", Icons.Default.Blender)
         Spacer(Modifier.height(15.dp))
-        MealRow("Обед", "${plan.AteLunch.toInt()} / ${plan.LunchKcal.toInt()} Ккал", Icons.Default.FoodBank)
+        MealRow("Обед", "${stats.ateLunch.toInt()} / ${plan.lunchKcal.toInt()} Ккал", Icons.Default.FoodBank)
         Spacer(Modifier.height(15.dp))
-        MealRow("Ужин", "${plan.AteDinner.toInt()} / ${plan.DinnerKcal.toInt()} Ккал", Icons.Default.DinnerDining)
+        MealRow("Ужин", "${stats.ateDinner.toInt()} / ${plan.dinnerKcal.toInt()} Ккал", Icons.Default.DinnerDining)
         Spacer(Modifier.height(15.dp))
-        MealRow("Перекусы", "${plan.AteOther.toInt()} / ${plan.OtherKcal.toInt()} Ккал", Icons.Default.LocalPizza)
+        MealRow("Перекусы", "${stats.ateOther.toInt()} / ${plan.otherKcal.toInt()} Ккал", Icons.Default.LocalPizza)
     }
 }
 
@@ -265,15 +267,15 @@ fun MealRow(meal: String, calories: String, icon: ImageVector) {
 @Preview(showBackground = true)
 @Composable
 fun NutritionPreview() {
-    fitPlan.DayKcal = 3000.0;
-    fitPlan.AteKcal = 1252.0;
-    fitPlan.Carb_g = 240.0;
-    fitPlan.Protein_g = 80.0;
-    fitPlan.Fat_g = 80.0;
-    fitPlan.BreakfastKcal = 900.0;
-    fitPlan.LunchKcal = 1200.0;
-    fitPlan.DinnerKcal = 900.0;
+    fitPlan.dayKcal = 3000.0;
+    feedStats.ateKcal = 1252.0;
+    fitPlan.carb_g = 240.0;
+    fitPlan.protein_g = 80.0;
+    fitPlan.fat_g = 80.0;
+    fitPlan.breakfastKcal = 900.0;
+    fitPlan.lunchKcal = 1200.0;
+    fitPlan.dinnerKcal = 900.0;
     ClientAppTheme() {
-        NutritionSummaryScreen(fitPlan);
+        NutritionSummaryScreen(fitPlan, feedStats);
     }
 }

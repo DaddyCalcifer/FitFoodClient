@@ -42,13 +42,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import com.fitfood.clientapp.models.FitPlan
-import com.fitfood.clientapp.models.FitPlanLite
 
 
-private val fitPlan = FitPlanLite();
+private val fitPlan = FitPlan();
 
 @Composable
-fun NutritionSummaryScreenLite(plan: FitPlanLite?) {
+fun NutritionSummaryScreenLite(plan: FitPlan?) {
     if(plan == null) return
     LazyColumn (
         modifier = Modifier
@@ -81,7 +80,7 @@ fun NutritionSummaryScreenLite(plan: FitPlanLite?) {
 }
 
 @Composable
-fun SummaryCardLite(plan: FitPlanLite) {
+fun SummaryCardLite(plan: FitPlan) {
     Card(
         modifier = Modifier
             .fillMaxWidth(),
@@ -124,7 +123,7 @@ fun CalorieInfoLite(value: String, label: String) {
 }
 
 @Composable
-fun MacronutrientsColumnLite(plan: FitPlanLite) {
+fun MacronutrientsColumnLite(plan: FitPlan) {
     if(plan.protein_g <=0) plan.protein_g = 1.0;
     if(plan.fat_g <=0) plan.fat_g = 1.0;
     if(plan.carb_g <=0) plan.carb_g = 1.0;
@@ -172,7 +171,7 @@ fun MacronutrientInfoLite(label: String, value: String, color: Color, progress: 
 }
 
 @Composable
-fun CircularCaloriesChartLite(plan: FitPlanLite) {
+fun CircularCaloriesChartLite(plan: FitPlan) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
@@ -204,7 +203,7 @@ fun CircularCaloriesChartLite(plan: FitPlanLite) {
 }
 
 @Composable
-fun MealsSectionLite(plan: FitPlanLite) {
+fun MealsSectionLite(plan: FitPlan) {
     Column(modifier = Modifier
         .fillMaxWidth()) {
         MealRowLite("Завтрак", "${plan.breakfastKcal.toInt()} Ккал", Icons.Default.Blender)

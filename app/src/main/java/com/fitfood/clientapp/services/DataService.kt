@@ -2,6 +2,8 @@ package com.fitfood.clientapp.services
 
 import android.content.Context
 import android.util.Log
+import com.fitfood.clientapp.models.FeedStats
+import com.fitfood.clientapp.models.FeedTotalStats
 import com.fitfood.clientapp.models.FitData
 import com.fitfood.clientapp.models.User
 import com.fitfood.clientapp.models.requests.GeneratePlanRequest
@@ -51,6 +53,25 @@ class DataService {
                 val responseBody = response.body?.string()
                 responseBody?.let {
                     Gson().fromJson(it, User::class.java)
+                }
+            } else {
+                null
+            }
+        }
+    }
+    suspend fun fetchTotalStats(token: String): FeedTotalStats? {
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .url(BASE_URL + "food/stats/today/total")
+            .addHeader("Authorization", "Bearer $token")
+            .build()
+
+        return withContext(Dispatchers.IO) {
+            val response: Response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val responseBody = response.body?.string()
+                responseBody?.let {
+                    Gson().fromJson(it, FeedTotalStats::class.java)
                 }
             } else {
                 null

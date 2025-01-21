@@ -38,6 +38,8 @@ import com.fitfood.clientapp.NutritionSummaryScreen
 import com.fitfood.clientapp.ParametersScreen
 import com.fitfood.clientapp.PlansScreen
 import com.fitfood.clientapp.models.ActivityType
+import com.fitfood.clientapp.models.FeedStats
+import com.fitfood.clientapp.models.FeedTotalStats
 import com.fitfood.clientapp.models.FitData
 import com.fitfood.clientapp.models.FitPlan
 import com.fitfood.clientapp.models.Gender
@@ -85,17 +87,18 @@ fun BottomNavigationBar(selectedScreen: Screen, onScreenSelected: (Screen) -> Un
         containerColor = Color(0xFF5E953B),
         contentColor = Color.White
     ) {
-        NavigationBarItem(
-            icon = { Icon(Screen.Nutrition.icon, contentDescription = null) },
-            label = { Text(Screen.Nutrition.title) },
-            selected = selectedScreen is Screen.Nutrition,
-            onClick = { onScreenSelected(Screen.Nutrition) }
-        )
+
         NavigationBarItem(
             icon = { Icon(Screen.PhysicalData.icon, contentDescription = null) },
             label = { Text(Screen.PhysicalData.title) },
             selected = selectedScreen is Screen.PhysicalData,
             onClick = { onScreenSelected(Screen.PhysicalData) }
+        )
+        NavigationBarItem(
+            icon = { Icon(Screen.Nutrition.icon, contentDescription = null) },
+            label = { Text(Screen.Nutrition.title) },
+            selected = selectedScreen is Screen.Nutrition,
+            onClick = { onScreenSelected(Screen.Nutrition) }
         )
         NavigationBarItem(
             icon = { Icon(Screen.Profile.icon, contentDescription = null) },
@@ -376,6 +379,7 @@ fun NutritionScreen(context: Context?) {
     var isLoading by remember { mutableStateOf(true) }
     val coroutineScope = rememberCoroutineScope()
     var user by remember { mutableStateOf<User?>(null) }
+    var stats by remember { mutableStateOf<FeedTotalStats?>(null) }
 
     if (context != null) {
         val sharedPreferences: SharedPreferences =
@@ -385,6 +389,7 @@ fun NutritionScreen(context: Context?) {
         fun refreshUser() {
             coroutineScope.launch {
                 user = dataService.fetchUser(token)
+                stats = dataService.fetchTotalStats(token)
                 isLoading = false
             }
         }
@@ -396,8 +401,10 @@ fun NutritionScreen(context: Context?) {
         if (isLoading) {
             LoadingScreen()
         } else {
-            user?.let {
-                PlansScreen (it, context) { refreshUser() }
+            user?.let { user_ ->
+                stats?.let {
+                    PlansScreen(user_, it, context) { refreshUser() }
+                }
             } ?: run {
                 Text("Ошибка загрузки данных")
             }

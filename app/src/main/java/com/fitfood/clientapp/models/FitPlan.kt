@@ -2,7 +2,7 @@ package com.fitfood.clientapp.models
 
 import java.util.UUID
 
-data class FitPlanLite (
+data class FitPlan (
     var id : UUID? = null,
     var dayKcal : Double = 0.0,
     var durationInDays : Int = 0,
