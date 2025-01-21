@@ -60,6 +60,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavController
 import com.fitfood.clientapp.models.FeedTotalStats
 import com.fitfood.clientapp.models.FitData
 import com.fitfood.clientapp.models.FitPlan
@@ -277,7 +278,8 @@ fun PlansScreen(
     user: User,
     stats: FeedTotalStats,
     context: Context?,
-    onAddedData: () -> Unit
+    onAddedData: () -> Unit,
+    navController: NavController
 ) {
     var isAddingPlan by remember { mutableStateOf(false) }
     var isInPlan by remember { mutableStateOf(false) }
@@ -353,7 +355,7 @@ fun PlansScreen(
                 }
             }
         } else {
-            selectedPlan?.let { NutritionSummaryScreen(plan = it, stats) }
+            selectedPlan?.let { NutritionSummaryScreen(plan = it, stats, navController) }
         }
     }
 }

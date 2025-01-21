@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,8 +42,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.fitfood.clientapp.models.FeedAct
 import com.fitfood.clientapp.models.FeedTotalStats
 import com.fitfood.clientapp.models.FitPlan
+import java.util.UUID
 
 class PlanActivity: ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,34 +69,26 @@ private val fitPlan = FitPlan();
 private val feedStats = FeedTotalStats();
 
 @Composable
-fun NutritionSummaryScreen(plan: FitPlan, stats: FeedTotalStats) {
-    LazyColumn (
+fun NutritionSummaryScreen(plan: FitPlan, stats: FeedTotalStats, navController: NavController) {
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Заголовок
         item {
             Text(
                 text = "Сегодня",
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.padding(vertical = 10.dp)
             )
-
-            // Сводка калорий и диаграмма
-            SummaryCard(plan,stats)
-
+            SummaryCard(plan, stats)
             Spacer(modifier = Modifier.height(16.dp))
         }
 
         item {
-            // Приемы пищи
-            MealsSection(plan,stats)
-
+            MealsSection(plan, stats, navController)
             Spacer(modifier = Modifier.height(16.dp))
         }
-        // Нижняя навигационная панель
-        // BottomNavigationBar()
     }
 }
 
@@ -222,26 +223,27 @@ fun CircularCaloriesChart(plan: FitPlan, stats: FeedTotalStats) {
 }
 
 @Composable
-fun MealsSection(plan: FitPlan, stats: FeedTotalStats) {
-    Column(modifier = Modifier
-        .fillMaxWidth()) {
-        MealRow("Завтрак", "${stats.ateBreakfast.toInt()} / ${plan.breakfastKcal.toInt()} Ккал", Icons.Default.Blender)
+fun MealsSection(plan: FitPlan, stats: FeedTotalStats, navController: NavController) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        MealRow("Завтрак", "${stats.ateBreakfast.toInt()} / ${plan.breakfastKcal.toInt()} Ккал", Icons.Default.Blender, {navController.navigate("mealDetails/Breakfast")})
         Spacer(Modifier.height(15.dp))
-        MealRow("Обед", "${stats.ateLunch.toInt()} / ${plan.lunchKcal.toInt()} Ккал", Icons.Default.FoodBank)
+        MealRow("Обед", "${stats.ateLunch.toInt()} / ${plan.lunchKcal.toInt()} Ккал", Icons.Default.FoodBank, {navController.navigate("mealDetails/Lunch")})
         Spacer(Modifier.height(15.dp))
-        MealRow("Ужин", "${stats.ateDinner.toInt()} / ${plan.dinnerKcal.toInt()} Ккал", Icons.Default.DinnerDining)
+        MealRow("Ужин", "${stats.ateDinner.toInt()} / ${plan.dinnerKcal.toInt()} Ккал", Icons.Default.DinnerDining, {navController.navigate("mealDetails/Dinner")})
         Spacer(Modifier.height(15.dp))
-        MealRow("Перекусы", "${stats.ateOther.toInt()} / ${plan.otherKcal.toInt()} Ккал", Icons.Default.LocalPizza)
+        MealRow("Перекусы", "${stats.ateOther.toInt()} / ${plan.otherKcal.toInt()} Ккал", Icons.Default.LocalPizza, {navController.navigate("mealDetails/Other")})
     }
 }
 
+
 @Composable
-fun MealRow(meal: String, calories: String, icon: ImageVector) {
+fun MealRow(meal: String, calories: String, icon: ImageVector, onMealClick: (String) -> Unit) {
     Row(
         modifier = Modifier
             .background(Color(0x18315A16), RoundedCornerShape(20.dp))
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 8.dp)
+            .clickable { onMealClick(meal) },
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -254,15 +256,12 @@ fun MealRow(meal: String, calories: String, icon: ImageVector) {
                 Text(text = calories, style = MaterialTheme.typography.bodyLarge)
             }
         }
-        IconButton(onClick = { /* TODO: Add meal */ },
-            Modifier.size(60.dp)) {
-            Icon(imageVector = Icons.Filled.KeyboardArrowRight,
-                contentDescription = "Добавить $meal",
-                Modifier.fillMaxSize(0.65f),
-                tint = Color(0xFF1A300c))
+        IconButton(onClick = { onMealClick(meal) }, Modifier.size(60.dp)) {
+            Icon(imageVector = Icons.Filled.KeyboardArrowRight, contentDescription = "Открыть $meal", Modifier.fillMaxSize(0.65f), tint = Color(0xFF1A300c))
         }
     }
 }
+
 
 @Preview(showBackground = true)
 @Composable
@@ -276,6 +275,6 @@ fun NutritionPreview() {
     fitPlan.lunchKcal = 1200.0;
     fitPlan.dinnerKcal = 900.0;
     ClientAppTheme() {
-        NutritionSummaryScreen(fitPlan, feedStats);
+        //NutritionSummaryScreen(fitPlan, feedStats, {});
     }
 }

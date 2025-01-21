@@ -33,11 +33,19 @@ import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.navigation.NavController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.fitfood.clientapp.FoodListScreen
 import com.fitfood.clientapp.LoadingScreen
 import com.fitfood.clientapp.NutritionSummaryScreen
 import com.fitfood.clientapp.ParametersScreen
 import com.fitfood.clientapp.PlansScreen
 import com.fitfood.clientapp.models.ActivityType
+import com.fitfood.clientapp.models.FeedAct
 import com.fitfood.clientapp.models.FeedStats
 import com.fitfood.clientapp.models.FeedTotalStats
 import com.fitfood.clientapp.models.FitData
@@ -46,6 +54,7 @@ import com.fitfood.clientapp.models.Gender
 import com.fitfood.clientapp.models.User
 import com.fitfood.clientapp.services.DataService
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 sealed class Screen(val title: String, val icon: ImageVector) {
     object PhysicalData : Screen("Параметры", Icons.Filled.FitnessCenter)
@@ -57,13 +66,12 @@ val dataService = DataService()
 
 @Composable
 fun MainScreen(navController: NavController?, context: Context?) {
-    var selectedScreen by remember { mutableStateOf<Screen>(Screen.PhysicalData) }
+    val navController = rememberNavController()
+
 
     Scaffold(
         bottomBar = {
-            BottomNavigationBar(selectedScreen) { screen ->
-                selectedScreen = screen
-            }
+            BottomNavigationBar(navController)
         }
     ) { innerPadding ->
         Box(
@@ -71,18 +79,41 @@ fun MainScreen(navController: NavController?, context: Context?) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            when (selectedScreen) {
-                is Screen.Profile -> ProfileScreen(navController, context)
-                is Screen.PhysicalData -> PhysicalDataScreen(context)
-                is Screen.Nutrition -> NutritionScreen(context)
-                else -> {}
+            NavHost(navController = navController, startDestination = "Nutrition") {
+                composable("Profile") {
+                    ProfileScreen(navController, context)
+                }
+                composable("PhysicalData") {
+                    PhysicalDataScreen(context)
+                }
+                composable("Nutrition") {
+                    NutritionScreen(navController, context)
+                }
+                composable("Nutrition/Detail") {
+                    var user by remember { mutableStateOf<User?>(null) }
+                    var stats by remember { mutableStateOf<FeedTotalStats?>(null) }
+
+                    NutritionScreen(navController, context)
+                }
+
+                composable(
+                    route = "mealDetails/{mealType}",
+                    arguments = listOf(navArgument("mealType") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val mealType = backStackEntry.arguments?.getString("mealType") ?: "Unknown"
+                    val foodItems = listOf(
+                        FeedAct(UUID.randomUUID(), "21.01.2025", 1, "Яблоко", 90.0, 180.0,0.0,10.0, 20.0),
+                        FeedAct(UUID.randomUUID(), "21.01.2025", 1, "Курица", 160.0, 250.0,12.0,18.0, 0.0)
+                    )
+                    FoodListScreen (foodItems, {}, {navController.popBackStack()})
+                }
             }
         }
     }
 }
 
 @Composable
-fun BottomNavigationBar(selectedScreen: Screen, onScreenSelected: (Screen) -> Unit) {
+fun BottomNavigationBar(navController: NavController) {
     NavigationBar(
         containerColor = Color(0xFF5E953B),
         contentColor = Color.White
@@ -91,20 +122,26 @@ fun BottomNavigationBar(selectedScreen: Screen, onScreenSelected: (Screen) -> Un
         NavigationBarItem(
             icon = { Icon(Screen.PhysicalData.icon, contentDescription = null) },
             label = { Text(Screen.PhysicalData.title) },
-            selected = selectedScreen is Screen.PhysicalData,
-            onClick = { onScreenSelected(Screen.PhysicalData) }
+            selected = navController.currentBackStackEntryAsState().value?.destination?.route == "PhysicalData",
+            onClick = {
+                navController.navigate("PhysicalData")
+            }
         )
         NavigationBarItem(
             icon = { Icon(Screen.Nutrition.icon, contentDescription = null) },
             label = { Text(Screen.Nutrition.title) },
-            selected = selectedScreen is Screen.Nutrition,
-            onClick = { onScreenSelected(Screen.Nutrition) }
+            selected = navController.currentBackStackEntryAsState().value?.destination?.route == "Nutrition",
+            onClick = {
+                navController.navigate("Nutrition")
+            }
         )
         NavigationBarItem(
             icon = { Icon(Screen.Profile.icon, contentDescription = null) },
             label = { Text(Screen.Profile.title) },
-            selected = selectedScreen is Screen.Profile,
-            onClick = { onScreenSelected(Screen.Profile) }
+            selected = navController.currentBackStackEntryAsState().value?.destination?.route == "Profile",
+            onClick = {
+                navController.navigate("Profile")
+            }
         )
     }
 }
@@ -375,7 +412,7 @@ fun PhysicalDataScreen(context: Context?) {
 }
 
 @Composable
-fun NutritionScreen(context: Context?) {
+fun NutritionScreen(navController: NavController, context: Context?) {
     var isLoading by remember { mutableStateOf(true) }
     val coroutineScope = rememberCoroutineScope()
     var user by remember { mutableStateOf<User?>(null) }
@@ -403,7 +440,7 @@ fun NutritionScreen(context: Context?) {
         } else {
             user?.let { user_ ->
                 stats?.let {
-                    PlansScreen(user_, it, context) { refreshUser() }
+                    PlansScreen(user_, it, context, {refreshUser()}, navController)
                 }
             } ?: run {
                 Text("Ошибка загрузки данных")
