@@ -1,5 +1,6 @@
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.JsonToken
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Male
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.navigation.NavController
 import androidx.navigation.NavType
@@ -39,6 +41,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.fitfood.clientapp.AddProductForm
 import com.fitfood.clientapp.FoodListScreen
 import com.fitfood.clientapp.LoadingScreen
 import com.fitfood.clientapp.NutritionSummaryScreen
@@ -50,6 +53,7 @@ import com.fitfood.clientapp.models.FeedStats
 import com.fitfood.clientapp.models.FeedTotalStats
 import com.fitfood.clientapp.models.FitData
 import com.fitfood.clientapp.models.FitPlan
+import com.fitfood.clientapp.models.FoodRequest
 import com.fitfood.clientapp.models.Gender
 import com.fitfood.clientapp.models.User
 import com.fitfood.clientapp.services.DataService
@@ -95,18 +99,45 @@ fun MainScreen(navController: NavController?, context: Context?) {
 
                     NutritionScreen(navController, context)
                 }
+                composable("Nutrition/Add/{mealType}",
+                    arguments = listOf(navArgument("mealType") { type = NavType.StringType })) {
+                    backStackEntry ->
+                    val mealType = backStackEntry.arguments?.getString("mealType") ?: "Unknown"
+                    val sharedPreferences: SharedPreferences = LocalContext.current.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                    val token_ = sharedPreferences.getString("jwt", "").orEmpty()
+
+                    AddProductForm(onAddProduct = {data, token, type ->
+                        dataService.sendFoodData(data, token, type)
+                    },{navController.popBackStack()}, token_, mealType)
+                }
 
                 composable(
                     route = "mealDetails/{mealType}",
                     arguments = listOf(navArgument("mealType") { type = NavType.StringType })
                 ) { backStackEntry ->
                     val mealType = backStackEntry.arguments?.getString("mealType") ?: "Unknown"
-                    val foodItems = listOf(
-                        FeedAct(UUID.randomUUID(), "21.01.2025", 1, "Яблоко", 90.0, 180.0,0.0,10.0, 20.0),
-                        FeedAct(UUID.randomUUID(), "21.01.2025", 1, "Курица", 160.0, 250.0,12.0,18.0, 0.0)
+
+                    val context = LocalContext.current // Получение контекста безопасным способом
+                    val sharedPreferences: SharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                    val token = sharedPreferences.getString("jwt", "").orEmpty()
+
+                    // Состояние для списка продуктов
+                    val foodItemsState = remember { mutableStateOf<List<FeedAct>>(emptyList()) }
+
+                    // Загрузка данных
+                    LaunchedEffect(Unit) {
+                        val fetchedFoodItems = dataService.fetchTodayFeedsByType(token, mealType)
+                        foodItemsState.value = fetchedFoodItems ?: emptyList() // Обработка null
+                    }
+
+                    // Отображение экрана
+                    FoodListScreen(
+                        foodItems = foodItemsState.value,
+                        onAddFood = { navController.navigate("Nutrition/Add/${mealType}") },
+                        onCancel = { navController.popBackStack() }
                     )
-                    FoodListScreen (foodItems, {}, {navController.popBackStack()})
                 }
+
             }
         }
     }

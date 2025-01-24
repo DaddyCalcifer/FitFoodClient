@@ -124,7 +124,7 @@ fun SummaryCard(plan: FitPlan, stats: FeedTotalStats) {
             ) {
                 CalorieInfo("\uD83D\uDE0B ${stats.ateKcal.toInt()}", "Съедено")
                 CalorieInfo("\uD83E\uDD0F ${remainingKcal.toInt()}", "Осталось")
-                CalorieInfo("\uD83D\uDD25 ${stats.burntKcal.toInt()}", "Сожжено")
+                CalorieInfo("\uD83D\uDCA7 ${plan.waterMl.toInt()}", "Вода (мл.)")
             }
         }
     }
@@ -211,7 +211,7 @@ fun CircularCaloriesChart(plan: FitPlan, stats: FeedTotalStats) {
                 style = MaterialTheme.typography.headlineLarge
             )
             Text(
-                text = "/ ${plan.dayKcal.toInt()}",
+                text = "/ ${plan.dayKcal.toInt()} ккал",
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
