@@ -65,6 +65,29 @@ class DataService {
             }
         })
     }
+    fun deleteFoodData(id: String, token: String) {
+        val url = "${BASE_URL}food/$id/delete"
+        val requestBody = Gson().toJson("")
+        val request = Request.Builder()
+            .url(url)
+            .delete(requestBody.toRequestBody("application/json".toMediaTypeOrNull()))
+            .addHeader("Authorization", "Bearer $token")
+            .build()
+
+        OkHttpClient().newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("FoodData", "Failed to delete data", e)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (response.isSuccessful) {
+                    Log.d("FoodData", "Data deleted successfully")
+                } else {
+                    Log.e("FoodData", "Failed with status: ${response.code}")
+                }
+            }
+        })
+    }
     suspend fun fetchUser(token: String): User? {
         val client = OkHttpClient()
         val request = Request.Builder()

@@ -380,10 +380,10 @@ fun UserDataItem(data: FitData, modifier: Modifier) {
         Spacer(modifier = Modifier.width(16.dp))
 
         Column {
-            Text(text = "Вес: ${data.weight} кг", style = MaterialTheme.typography.bodyLarge)
-            Text(text = "Рост: ${data.height} см", style = MaterialTheme.typography.bodyLarge)
-            Text(text = "Возраст: ${data.age} лет", style = MaterialTheme.typography.bodyLarge)
-            Text(text = "Активность: ${data.activity}", style = MaterialTheme.typography.bodyLarge)
+            Text(text = "Вес: ${data.weight} кг", style = MaterialTheme.typography.headlineSmall)
+            Text(text = "Рост: ${data.height} см", style = MaterialTheme.typography.headlineSmall)
+            Text(text = "Возраст: ${data.age} лет", style = MaterialTheme.typography.headlineSmall)
+            Text(text = "Активность: ${data.activity}", style = MaterialTheme.typography.headlineSmall)
         }
     }
 }
@@ -405,8 +405,8 @@ fun UserPlanItem(plan: FitPlan, modifier: Modifier) {
         Spacer(modifier = Modifier.width(16.dp))
 
         Column {
-            Text(text = "Пища: ${plan.dayKcal} ккал", style = MaterialTheme.typography.bodyLarge)
-            Text(text = "Вода: ${plan.waterMl} мл", style = MaterialTheme.typography.bodyLarge)
+            Text(text = "Пища: ${plan.dayKcal} ккал", style = MaterialTheme.typography.headlineSmall)
+            Text(text = "Вода: ${plan.waterMl} мл", style = MaterialTheme.typography.headlineSmall)
         }
     }
 }

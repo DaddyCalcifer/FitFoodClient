@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -24,8 +25,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.CoPresent
+import androidx.compose.material.icons.filled.Construction
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Female
 import androidx.compose.material.icons.filled.FitnessCenter
@@ -61,8 +64,8 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 sealed class Screen(val title: String, val icon: ImageVector) {
-    object PhysicalData : Screen("Параметры", Icons.Filled.FitnessCenter)
-    object Nutrition : Screen("План питания", Icons.Filled.Restaurant)
+    object PhysicalData : Screen("Тренировки", Icons.Filled.FitnessCenter)
+    object Nutrition : Screen("Питание", Icons.Filled.Restaurant)
     object Profile : Screen("Профиль", Icons.Filled.AccountCircle)
 }
 
@@ -88,7 +91,19 @@ fun MainScreen(navController: NavController?, context: Context?) {
                     ProfileScreen(navController, context)
                 }
                 composable("PhysicalData") {
-                    PhysicalDataScreen(context)
+                    //PhysicalDataScreen(context)
+                    Column(modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally)
+                    {
+                        Icon(
+                            imageVector = Icons.Default.Construction,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = Color.DarkGray
+                        )
+                        Text("Раздел в разработке", style = MaterialTheme.typography.headlineMedium)
+                    }
                 }
                 composable("Nutrition") {
                     NutritionScreen(navController, context)
@@ -134,7 +149,8 @@ fun MainScreen(navController: NavController?, context: Context?) {
                     FoodListScreen(
                         foodItems = foodItemsState.value,
                         onAddFood = { navController.navigate("Nutrition/Add/${mealType}") },
-                        onCancel = { navController.popBackStack() }
+                        onCancel = { navController.popBackStack() },
+                        onDelete = {id, tokenz -> dataService.deleteFoodData(id, tokenz) }
                     )
                 }
 

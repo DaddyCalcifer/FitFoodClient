@@ -170,7 +170,7 @@ fun MacronutrientsColumn(plan: FitPlan, stats: FeedTotalStats) {
 @Composable
 fun MacronutrientInfo(label: String, value: String, color: Color, progress: Float) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = label, style = MaterialTheme.typography.bodyLarge)
+        Text(text = label, style = MaterialTheme.typography.titleMedium)
         LinearProgressIndicator(
             progress = {
                 progress
@@ -182,7 +182,7 @@ fun MacronutrientInfo(label: String, value: String, color: Color, progress: Floa
             color = color,
             trackColor = Color.Transparent
         )
-        Text(text = value, style = MaterialTheme.typography.bodyLarge)
+        Text(text = value, style = MaterialTheme.typography.titleMedium)
     }
 }
 
@@ -208,15 +208,15 @@ fun CircularCaloriesChart(plan: FitPlan, stats: FeedTotalStats) {
         Column (horizontalAlignment = Alignment.CenterHorizontally){
             Text(
                 text = "${stats.ateKcal.toInt()}",
-                style = MaterialTheme.typography.headlineLarge
+                style = MaterialTheme.typography.titleLarge
             )
             Text(
                 text = "/ ${plan.dayKcal.toInt()} ккал",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.titleMedium
             )
             Text(
                 text = "Съедено",
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.titleMedium
             )
         }
     }

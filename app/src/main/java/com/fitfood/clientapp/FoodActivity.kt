@@ -67,9 +67,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavController
 import com.fitfood.clientapp.models.FeedAct
 import com.fitfood.clientapp.models.FeedTotalStats
 import com.fitfood.clientapp.models.FitData
@@ -85,7 +87,9 @@ fun FoodListScreen(
     foodItems: List<FeedAct>, // Список продуктов
     onAddFood: () -> Unit,      // Обработчик добавления нового продукта
     onCancel: () -> Unit,
+    onDelete: (id: String, token: String) -> Unit
 ) {
+    val token = LocalContext.current.getSharedPreferences("app_prefs", Context.MODE_PRIVATE).getString("jwt", "").toString()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -101,6 +105,8 @@ fun FoodListScreen(
             modifier = Modifier.weight(1f) // Занимает оставшееся место
         ) {
             items(foodItems) { food ->
+                val isDeleted = remember { mutableStateOf(false) }
+                if(!isDeleted.value)
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -144,6 +150,10 @@ fun FoodListScreen(
                             imageVector = Icons.Default.Close,
                             contentDescription = null,
                             modifier = Modifier.size(40.dp)
+                                .clickable{
+                                    onDelete(food.id.toString(), token)
+                                    isDeleted.value = true
+                                }
                         )
                     }
                 }
@@ -228,47 +238,68 @@ fun AddProductForm(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Top
+            .padding(16.dp)
     ) {
-        Text(
-            text = "Добавить продукт",
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        // Переключатель (ручной ввод / скан штрих-кода)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(vertical = 16.dp)
         ) {
-            Text(text = "Ручной ввод")
-            Switch(
-                checked = isManualInput,
-                onCheckedChange = { isManualInput = it }
+            Text(
+                text = "Добавить продукт",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = 16.dp)
             )
-        }
 
-        if (isManualInput) {
-            // Поля для ручного ввода с использованием FitTextBox
-            FitTextBox(content = name, label = "Название продукта", icon = Icons.Default.FoodBank)
-            FitTextBox(content = mass, label = "Масса (г)", icon = Icons.Default.Scale, keyboard = KeyboardType.Number)
-            FitTextBox(content = kcal, label = "Калории (ккал)", icon = Icons.Default.LocalFireDepartment, keyboard = KeyboardType.Number)
-            FitTextBox(content = fat, label = "Жиры (г)", icon = Icons.Default.Opacity, keyboard = KeyboardType.Number)
-            FitTextBox(content = protein, label = "Белки (г)", icon = Icons.Default.FitnessCenter, keyboard = KeyboardType.Number)
-            FitTextBox(content = carb, label = "Углеводы (г)", icon = Icons.Default.WaterDrop, keyboard = KeyboardType.Number)
-        } else {
-            // Кнопка сканирования штрих-кода
-            Button(
-                onClick = {},
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp)
-            ) {
-                Text("Сканировать штрих-код")
+            if (isManualInput) {
+                // Поля для ручного ввода с использованием FitTextBox
+                FitTextBox(
+                    content = name,
+                    label = "Название продукта",
+                    icon = Icons.Default.FoodBank
+                )
+                FitTextBox(
+                    content = mass,
+                    label = "Масса (г)",
+                    icon = Icons.Default.Scale,
+                    keyboard = KeyboardType.Number
+                )
+                FitTextBox(
+                    content = kcal,
+                    label = "Калории (ккал) / 100 г",
+                    icon = Icons.Default.LocalFireDepartment,
+                    keyboard = KeyboardType.Number
+                )
+                FitTextBox(
+                    content = fat,
+                    label = "Жиры (г) / 100 г",
+                    icon = Icons.Default.Opacity,
+                    keyboard = KeyboardType.Number
+                )
+                FitTextBox(
+                    content = protein,
+                    label = "Белки (г) / 100 г",
+                    icon = Icons.Default.FitnessCenter,
+                    keyboard = KeyboardType.Number
+                )
+                FitTextBox(
+                    content = carb,
+                    label = "Углеводы (г) / 100 г",
+                    icon = Icons.Default.WaterDrop,
+                    keyboard = KeyboardType.Number
+                )
+            } else {
+                // Кнопка сканирования штрих-кода
+                Button(
+                    onClick = {},
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp)
+                ) {
+                    Text("Сканировать штрих-код")
+                }
             }
         }
-
         // Кнопка добавления
         Button(
             onClick = {
@@ -287,7 +318,7 @@ fun AddProductForm(
                 .fillMaxWidth()
                 .height(70.dp),
             shape = RoundedCornerShape(20.dp),
-            colors = ButtonDefaults.buttonColors(Color(0xFF5E953B))
+            colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
         ) {
             Text("Добавить")
         }

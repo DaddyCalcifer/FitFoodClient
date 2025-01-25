@@ -4,6 +4,7 @@ import java.util.UUID
 
 
 data class FeedAct(
+    var id: UUID,
     var userId: UUID,
     var date: String,
     var feedType: Int,
