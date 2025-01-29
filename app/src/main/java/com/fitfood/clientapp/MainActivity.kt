@@ -348,7 +348,8 @@ fun LoadingScreen()
 fun FitTextBox(content: MutableState<String>,
                label: String,
                icon: ImageVector,
-               keyboard: KeyboardType = KeyboardType.Text)
+               keyboard: KeyboardType = KeyboardType.Text,
+               readOnly: Boolean = false)
 {
     TextField(
         value = content.value,
@@ -365,7 +366,8 @@ fun FitTextBox(content: MutableState<String>,
             unfocusedIndicatorColor = Color.Transparent,
             focusedIndicatorColor = Color.Transparent
         ),
-        keyboardOptions = KeyboardOptions(keyboardType = keyboard)
+        keyboardOptions = KeyboardOptions(keyboardType = keyboard),
+        readOnly = readOnly
     )
 }
 @Composable

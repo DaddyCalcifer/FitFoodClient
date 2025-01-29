@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,16 +27,25 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessibilityNew
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArtTrack
 import androidx.compose.material.icons.filled.Blender
+import androidx.compose.material.icons.filled.Construction
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DinnerDining
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Female
 import androidx.compose.material.icons.filled.FoodBank
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.LocalPizza
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.LockReset
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Male
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -47,6 +57,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,7 +69,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
 import com.fitfood.clientapp.models.FeedTotalStats
@@ -152,7 +165,7 @@ fun ParametersScreen(
                                         contentDescription = null,
                                         modifier = Modifier.size(32.dp)
                                     )
-                                    Text("Добавить")
+                                    Text("Добавить", style = MaterialTheme.typography.headlineMedium)
                                     Icon(
                                         imageVector = Icons.Default.Add,
                                         contentDescription = null,
@@ -338,7 +351,7 @@ fun PlansScreen(
                                         contentDescription = null,
                                         modifier = Modifier.size(32.dp)
                                     )
-                                    Text("Построить план")
+                                    Text("Построить план", style = MaterialTheme.typography.headlineMedium)
                                     Icon(
                                         imageVector = Icons.Default.Add,
                                         contentDescription = null,
@@ -408,5 +421,183 @@ fun UserPlanItem(plan: FitPlan, modifier: Modifier) {
             Text(text = "Пища: ${plan.dayKcal} ккал", style = MaterialTheme.typography.headlineSmall)
             Text(text = "Вода: ${plan.waterMl} мл", style = MaterialTheme.typography.headlineSmall)
         }
+    }
+}
+
+@Composable
+fun ProfileForm(
+    userId: String,
+    username: String,
+    email: String,
+    onSave: () -> Unit,
+    onChangePassword: () -> Unit,
+    onLogout: () -> Unit
+) {
+    var showPasswordDialog by remember { mutableStateOf(false) }
+    val currentPassword = remember { mutableStateOf("") }
+    val newPassword = remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(vertical = 16.dp)
+        ) {
+            Column(modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally)
+            {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    modifier = Modifier.size(70.dp),
+                    tint = Color.DarkGray
+                )
+                Text("Профиль", style = MaterialTheme.typography.headlineMedium)
+            }
+            Spacer(Modifier.height(70.dp))
+            FitTextBox(
+                content = remember { mutableStateOf(userId) },
+                label = "ID пользователя",
+                icon = Icons.Default.Person,
+                keyboard = KeyboardType.Text,
+                readOnly = true
+            )
+
+            FitTextBox(
+                content = remember { mutableStateOf(username) },
+                label = "Логин",
+                icon = Icons.Default.AccountCircle,
+                keyboard = KeyboardType.Text,
+                readOnly = true
+            )
+
+            FitTextBox(
+                content = remember { mutableStateOf(email) },
+                label = "Email",
+                icon = Icons.Default.Email,
+                keyboard = KeyboardType.Email,
+                readOnly = true
+            )
+
+            // Кнопка смены пароля
+            Button(
+                onClick = { showPasswordDialog = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+                    .height(60.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = ButtonDefaults.buttonColors(Color(0xFFDFE0EA))
+            ) {
+                Row(modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.LockReset,
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp),
+                        tint = Color.DarkGray
+                    )
+                    Text("Сменить пароль", color = Color.DarkGray, style = MaterialTheme.typography.titleMedium)
+                    Icon(
+                        imageVector = Icons.Filled.LockReset,
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp),
+                        tint = Color.Transparent
+                    )
+                }
+            }
+        }
+
+        // Кнопка сохранения
+        Button(
+            onClick = { onSave() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(70.dp),
+            shape = RoundedCornerShape(20.dp),
+            colors = ButtonDefaults.buttonColors(Color(0xFF5E953B))
+        ) {
+            Text("Сохранить изменения", style = MaterialTheme.typography.titleLarge)
+        }
+
+        // Кнопка выхода
+        Button(
+            onClick = onLogout,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp)
+                .padding(top = 8.dp),
+            shape = RoundedCornerShape(20.dp),
+            colors = ButtonDefaults.buttonColors(Color(0xFFDFE0EA))
+        ) {
+            Row(modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically)
+            {
+                Icon(
+                    imageVector = Icons.Filled.Logout,
+                    contentDescription = null,
+                    modifier = Modifier.size(35.dp),
+                    tint = Color.DarkGray
+                )
+                Text("Выйти из аккаунта", style = MaterialTheme.typography.titleMedium, color = Color.DarkGray)
+                Icon(
+                    imageVector = Icons.Filled.LockReset,
+                    contentDescription = null,
+                    modifier = Modifier.size(35.dp),
+                    tint = Color.Transparent
+                )
+            }
+        }
+    }
+
+    // Всплывающее окно смены пароля
+    if (showPasswordDialog) {
+        AlertDialog(
+            containerColor = Color.White,
+            onDismissRequest = { showPasswordDialog = false },
+            title = { Text("Смена пароля") },
+            text = {
+                Column {
+                    FitTextBox(
+                        content = currentPassword,
+                        label = "Текущий пароль",
+                        icon = Icons.Default.Lock,
+                        keyboard = KeyboardType.Password
+                    )
+                    FitTextBox(
+                        content = newPassword,
+                        label = "Новый пароль",
+                        icon = Icons.Default.LockOpen,
+                        keyboard = KeyboardType.Password
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onChangePassword()
+                        showPasswordDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(Color(0xFF5E953B))
+                ) {
+                    Text("Сохранить")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showPasswordDialog = false },
+                    colors = ButtonDefaults.buttonColors(Color(0xFFDFE0EA))
+                ) {
+                    Text("Отмена", color = Color.DarkGray)
+                }
+            }
+        )
     }
 }

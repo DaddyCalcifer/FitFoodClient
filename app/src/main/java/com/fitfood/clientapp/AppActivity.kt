@@ -50,6 +50,7 @@ import com.fitfood.clientapp.LoadingScreen
 import com.fitfood.clientapp.NutritionSummaryScreen
 import com.fitfood.clientapp.ParametersScreen
 import com.fitfood.clientapp.PlansScreen
+import com.fitfood.clientapp.ProfileForm
 import com.fitfood.clientapp.models.ActivityType
 import com.fitfood.clientapp.models.FeedAct
 import com.fitfood.clientapp.models.FeedStats
@@ -72,7 +73,7 @@ sealed class Screen(val title: String, val icon: ImageVector) {
 val dataService = DataService()
 
 @Composable
-fun MainScreen(navController: NavController?, context: Context?) {
+fun MainScreen(navController_: NavController?, context: Context?) {
     val navController = rememberNavController()
 
 
@@ -88,7 +89,7 @@ fun MainScreen(navController: NavController?, context: Context?) {
         ) {
             NavHost(navController = navController, startDestination = "Nutrition") {
                 composable("Profile") {
-                    ProfileScreen(navController, context)
+                    ProfileScreen(navController_, LocalContext.current)
                 }
                 composable("PhysicalData") {
                     //PhysicalDataScreen(context)
@@ -109,8 +110,6 @@ fun MainScreen(navController: NavController?, context: Context?) {
                     NutritionScreen(navController, context)
                 }
                 composable("Nutrition/Detail") {
-                    var user by remember { mutableStateOf<User?>(null) }
-                    var stats by remember { mutableStateOf<FeedTotalStats?>(null) }
 
                     NutritionScreen(navController, context)
                 }
@@ -163,7 +162,8 @@ fun MainScreen(navController: NavController?, context: Context?) {
 fun BottomNavigationBar(navController: NavController) {
     NavigationBar(
         containerColor = Color(0xFF5E953B),
-        contentColor = Color.White
+        contentColor = Color.White,
+        modifier = Modifier.height(100.dp)
     ) {
 
         NavigationBarItem(
@@ -195,7 +195,7 @@ fun BottomNavigationBar(navController: NavController) {
 
 @Composable
 fun ProfileScreen(navController: NavController?, context: Context?) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    /*Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column {
             Text(text = "Ваш профиль:")
             Spacer(Modifier.height(15.dp))
@@ -221,6 +221,40 @@ fun ProfileScreen(navController: NavController?, context: Context?) {
                 Text("Выйти из профиля")
             }
         }
+    }*/
+    val token = LocalContext.current
+        .getSharedPreferences("app_prefs",
+            Context.MODE_PRIVATE)
+        .getString("jwt", "").orEmpty()
+
+    // Состояние для данных пользователя
+    var user by remember { mutableStateOf<User?>(null) }
+
+    // Загрузка данных
+    LaunchedEffect(Unit) {
+        user = dataService.fetchUser(token)
+    }
+
+    user?.let {
+        ProfileForm(userId = it.id.toString(),
+            username = it.username,
+            email = it.email,
+            {},
+            {},
+            {
+                if (context != null && navController != null) {
+                    val sharedPreferences: SharedPreferences =
+                        context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                    sharedPreferences.edit().putString("jwt", "").apply()
+                    (context as? ComponentActivity)?.runOnUiThread {
+                        navController.navigate("auth") {
+                            popUpTo("main") { inclusive = true }
+                        }
+                    }
+                }
+            })
+    }?: run {
+        LoadingScreen()
     }
 }
 

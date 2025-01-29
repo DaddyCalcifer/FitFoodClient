@@ -73,13 +73,13 @@ fun NutritionSummaryScreen(plan: FitPlan, stats: FeedTotalStats, navController: 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp,12.dp,16.dp,0.dp)
     ) {
         item {
             Text(
                 text = "Сегодня",
                 style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(vertical = 10.dp)
+                modifier = Modifier.padding(vertical = 5.dp)
             )
             SummaryCard(plan, stats)
             Spacer(modifier = Modifier.height(16.dp))
@@ -150,7 +150,7 @@ fun MacronutrientsColumn(plan: FitPlan, stats: FeedTotalStats) {
     ) {
         MacronutrientInfo("\uD83E\uDD69\t\tБелки",
             "${stats.ateProtein.toInt()} /  ${plan.protein_g.toInt()} г",
-            Color(0xFF488521),
+            Color(0xFFFFFFFF),
             (stats.ateProtein.toInt() /  plan.protein_g.toInt()).toFloat())
         Spacer(Modifier.height(15.dp))
 
@@ -171,20 +171,30 @@ fun MacronutrientsColumn(plan: FitPlan, stats: FeedTotalStats) {
 fun MacronutrientInfo(label: String, value: String, color: Color, progress: Float) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(text = label, style = MaterialTheme.typography.titleMedium)
-        LinearProgressIndicator(
-            progress = {
-                progress
-            },
+
+        Box(
             modifier = Modifier
-                .height(16.dp)
-                .width(100.dp)
-                .clip(RoundedCornerShape(8.dp)),
-            color = color,
-            trackColor = Color.Transparent
-        )
-        Text(text = value, style = MaterialTheme.typography.titleMedium)
+                .fillMaxWidth()
+                .height(30.dp)
+                .clip(RoundedCornerShape(12.dp))
+        ) {
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxSize(),
+                color = color,
+                trackColor = Color(0x17488521)
+            )
+
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.align(Alignment.Center)
+            )
+        }
     }
 }
+
 
 @Composable
 fun CircularCaloriesChart(plan: FitPlan, stats: FeedTotalStats) {
@@ -202,7 +212,7 @@ fun CircularCaloriesChart(plan: FitPlan, stats: FeedTotalStats) {
             modifier = Modifier
                 .fillMaxSize()
             ,
-            trackColor = Color.Transparent,
+            trackColor = Color(0x17488521),
             color = Color(0xFF488521)
         )
         Column (horizontalAlignment = Alignment.CenterHorizontally){

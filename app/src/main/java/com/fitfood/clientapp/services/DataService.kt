@@ -91,7 +91,7 @@ class DataService {
     suspend fun fetchUser(token: String): User? {
         val client = OkHttpClient()
         val request = Request.Builder()
-            .url(BASE_URL + "user/")
+            .url(BASE_URL + "user")
             .addHeader("Authorization", "Bearer $token")
             .build()
 
