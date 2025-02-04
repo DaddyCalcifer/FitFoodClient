@@ -195,33 +195,6 @@ fun BottomNavigationBar(navController: NavController) {
 
 @Composable
 fun ProfileScreen(navController: NavController?, context: Context?) {
-    /*Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column {
-            Text(text = "Ваш профиль:")
-            Spacer(Modifier.height(15.dp))
-            Button(
-                onClick = {
-                    if(context != null && navController != null) {
-                        val sharedPreferences: SharedPreferences =
-                            context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-                        sharedPreferences.edit().putString("jwt", "").apply()
-                        (context as? ComponentActivity)?.runOnUiThread {
-                            navController.navigate("auth") {
-                                popUpTo("main") { inclusive = true }
-                            }
-                        }
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth(0.6f)
-                    .height(70.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.buttonColors(Color(0xFF5E953B))
-            ) {
-                Text("Выйти из профиля")
-            }
-        }
-    }*/
     val token = LocalContext.current
         .getSharedPreferences("app_prefs",
             Context.MODE_PRIVATE)

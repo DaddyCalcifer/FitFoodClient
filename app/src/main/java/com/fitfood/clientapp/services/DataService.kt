@@ -7,6 +7,7 @@ import com.fitfood.clientapp.models.FeedStats
 import com.fitfood.clientapp.models.FeedTotalStats
 import com.fitfood.clientapp.models.FitData
 import com.fitfood.clientapp.models.FoodRequest
+import com.fitfood.clientapp.models.ProductData
 import com.fitfood.clientapp.models.User
 import com.fitfood.clientapp.models.requests.GeneratePlanRequest
 import com.fitfood.clientapp.services.AuthService.RegisterRequest
@@ -101,6 +102,24 @@ class DataService {
                 val responseBody = response.body?.string()
                 responseBody?.let {
                     Gson().fromJson(it, User::class.java)
+                }
+            } else {
+                null
+            }
+        }
+    }
+    suspend fun fetchProduct(barcode: String): ProductData? {
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .url(BASE_URL + "product/${barcode}")
+            .build()
+
+        return withContext(Dispatchers.IO) {
+            val response: Response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val responseBody = response.body?.string()
+                responseBody?.let {
+                    Gson().fromJson(it, ProductData::class.java)
                 }
             } else {
                 null

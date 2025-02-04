@@ -3,11 +3,19 @@ package com.fitfood.clientapp
 import FitDataForm
 import android.content.Context
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
+import android.util.Size
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -56,8 +64,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -71,6 +81,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import com.fitfood.clientapp.models.FeedAct
 import com.fitfood.clientapp.models.FeedTotalStats
@@ -78,9 +91,14 @@ import com.fitfood.clientapp.models.FitData
 import com.fitfood.clientapp.models.FitPlan
 import com.fitfood.clientapp.models.FoodRequest
 import com.fitfood.clientapp.models.Gender
+import com.fitfood.clientapp.models.ProductData
 import com.fitfood.clientapp.models.User
 import com.fitfood.clientapp.services.DataService
+import com.google.mlkit.vision.barcode.BarcodeScanner
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.common.InputImage
 import java.util.UUID
+
 
 @Composable
 fun FoodListScreen(
@@ -220,14 +238,17 @@ fun FoodListScreen(
 }
 @Composable
 fun AddProductForm(
-    onAddProduct: (FoodRequest,String,String) -> Unit,
+    onAddProduct: (FoodRequest, String, String) -> Unit,
     onBack: () -> Unit,
     token: String,
     type: String
 ) {
-    var isManualInput by remember { mutableStateOf(true) }
+    var showBarcodeScanner by remember { mutableStateOf(false) }
+    var barcodeValue by remember { mutableStateOf("") }
+    var product by remember { mutableStateOf<ProductData?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    // Поля для ввода
     val name = remember { mutableStateOf("") }
     val mass = remember { mutableStateOf("") }
     val kcal = remember { mutableStateOf("") }
@@ -235,23 +256,67 @@ fun AddProductForm(
     val protein = remember { mutableStateOf("") }
     val carb = remember { mutableStateOf("") }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
+    // Загружаем продукт при изменении barcodeValue
+    val fetchedProduct by produceState<ProductData?>(initialValue = null, barcodeValue) {
+        if (barcodeValue.isNotEmpty()) {
+            Log.d("Scanner", "Запрос к API для штрих-кода: $barcodeValue")
+            isLoading = true
+            errorMessage = null
+            value = try {
+                val fetched = dataService.fetchProduct(barcodeValue)
+                if (fetched == null) {
+                    Log.e("Scanner", "Продукт не найден")
+                    throw Exception("Продукт не найден")
+                }
+                Log.d("Scanner", "Продукт загружен: ${fetched.name}")
+                fetched
+            } catch (e: Exception) {
+                errorMessage = "Ошибка: ${e.message}"
+                Log.e("Scanner", "Ошибка при загрузке: ${e.message}")
+                null
+            } finally {
+                isLoading = false
+                showBarcodeScanner = false
+            }
+        }
+    }
+
+    // Заполняем форму данными, если продукт найден
+    LaunchedEffect(fetchedProduct) {
+        fetchedProduct?.let {
+            Log.d("Scanner", "Заполняем форму данными продукта: ${it.name}")
+            name.value = it.name
+            mass.value = it.weight.toInt().toString()
+            kcal.value = it.calories.toInt().toString()
+            fat.value = it.fat.toInt().toString()
+            carb.value = it.carbohydrates.toInt().toString()
+            protein.value = it.protein.toInt().toString()
+        }
+    }
+
+    if (showBarcodeScanner) {
+        BarcodeScannerScreen { barcode ->
+            Log.d("Scanner", "Отсканирован штрих-код: $barcode")
+            barcodeValue = barcode
+        }
+    }
+    else {
         Column(
             modifier = Modifier
-                .weight(1f)
-                .padding(vertical = 16.dp)
+                .fillMaxSize()
+                .padding(16.dp)
         ) {
-            Text(
-                text = "Добавить продукт",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(vertical = 16.dp)
+            ) {
+                Text(
+                    text = "Добавить продукт",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
 
-            if (isManualInput) {
                 // Поля для ручного ввода с использованием FitTextBox
                 FitTextBox(
                     content = name,
@@ -288,40 +353,48 @@ fun AddProductForm(
                     icon = Icons.Default.WaterDrop,
                     keyboard = KeyboardType.Number
                 )
-            } else {
-                // Кнопка сканирования штрих-кода
                 Button(
-                    onClick = {},
+                    onClick = { showBarcodeScanner = true },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 16.dp)
+                        .height(70.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
                 ) {
-                    Text("Сканировать штрих-код")
+                    Text("Сканировать штрих-код", style = MaterialTheme.typography.headlineMedium)
                 }
             }
-        }
-        // Кнопка добавления
-        Button(
-            onClick = {
-                if (isManualInput) {
+            // Кнопка добавления
+            Button(
+                onClick = {
                     val massValue = mass.value.toDoubleOrNull() ?: 0.0
                     val kcalValue = kcal.value.toDoubleOrNull() ?: 0.0
                     val fatValue = fat.value.toDoubleOrNull() ?: 0.0
                     val proteinValue = protein.value.toDoubleOrNull() ?: 0.0
                     val carbValue = carb.value.toDoubleOrNull() ?: 0.0
 
-                    onAddProduct(FoodRequest(name.value, massValue, kcalValue, fatValue, proteinValue, carbValue),token, type)
+                    onAddProduct(
+                        FoodRequest(
+                            name.value,
+                            massValue,
+                            kcalValue,
+                            fatValue,
+                            proteinValue,
+                            carbValue
+                        ),
+                        token,
+                        type
+                    )
                     onBack()
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(70.dp),
-            shape = RoundedCornerShape(20.dp),
-            colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
-        ) {
-            Text("Добавить")
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(70.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
+            ) {
+                Text("Добавить", style = MaterialTheme.typography.headlineMedium)
+            }
         }
     }
 }
-
