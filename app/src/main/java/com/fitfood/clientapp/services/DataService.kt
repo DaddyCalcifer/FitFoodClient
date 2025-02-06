@@ -1,6 +1,7 @@
 package com.fitfood.clientapp.services
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import com.fitfood.clientapp.models.FeedAct
 import com.fitfood.clientapp.models.FeedStats
@@ -177,6 +178,24 @@ class DataService {
                 val responseBody = response.body?.string()
                 responseBody?.let {
                     Gson().fromJson(it, Array<FeedAct>::class.java).toList()
+                }
+            } else {
+                null
+            }
+        }
+    }
+    suspend fun fetchSearchResults(name: String): List<ProductData>? {
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .url(BASE_URL + "food/search?name=${name}")
+            .build()
+
+        return withContext(Dispatchers.IO) {
+            val response: Response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val responseBody = response.body?.string()
+                responseBody?.let {
+                    Gson().fromJson(it, Array<ProductData>::class.java).toList()
                 }
             } else {
                 null

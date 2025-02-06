@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.util.Size
+import android.widget.Space
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -51,6 +53,7 @@ import androidx.compose.material.icons.filled.LocalPizza
 import androidx.compose.material.icons.filled.Male
 import androidx.compose.material.icons.filled.Opacity
 import androidx.compose.material.icons.filled.Scale
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -65,11 +68,14 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import com.fitfood.clientapp.ui.theme.ClientAppTheme
@@ -167,8 +173,9 @@ fun FoodListScreen(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = null,
-                            modifier = Modifier.size(40.dp)
-                                .clickable{
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clickable {
                                     onDelete(food.id.toString(), token)
                                     isDeleted.value = true
                                 }
@@ -280,7 +287,7 @@ fun AddProductForm(
             }
         }
     }
-
+    var isSearching = remember { mutableStateOf(false) }
     // Заполняем форму данными, если продукт найден
     LaunchedEffect(fetchedProduct) {
         fetchedProduct?.let {
@@ -318,11 +325,52 @@ fun AddProductForm(
                 )
 
                 // Поля для ручного ввода с использованием FitTextBox
-                FitTextBox(
-                    content = name,
-                    label = "Название продукта",
-                    icon = Icons.Default.FoodBank
-                )
+                Row(Modifier.fillMaxWidth()) {
+                    val nameBoxLength = if(name.value.length > 1) {
+                        if (isSearching.value) 0.76f else 0.88f
+                    } else 1f
+                    Box(Modifier.fillMaxWidth(nameBoxLength)) {
+                        FitTextBox(
+                            content = name,
+                            label = "Название продукта",
+                            icon = Icons.Default.FoodBank
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .align(alignment = Alignment.CenterVertically)
+                            .clickable {
+                                isSearching.value = true
+                            }
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .align(alignment = Alignment.CenterVertically)
+                            .clickable {
+                                isSearching.value = false
+                            }
+                    )
+                }
+                if(isSearching.value && name.value.length > 1) {
+                    Spacer(Modifier.height(4.dp))
+                    SearchResults(name.value,
+                        name = name,
+                        fat = fat,
+                        carb = carb,
+                        protein = protein,
+                        kcal = kcal,
+                        weight = mass,
+                        isSearch = isSearching)
+                    Spacer(Modifier.height(4.dp))
+                }
                 FitTextBox(
                     content = mass,
                     label = "Масса (г)",
@@ -357,7 +405,8 @@ fun AddProductForm(
                     onClick = { showBarcodeScanner = true },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(70.dp),
+                        .height(70.dp)
+                        .padding(vertical = 8.dp),
                     shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
                 ) {
@@ -394,6 +443,70 @@ fun AddProductForm(
                 colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
             ) {
                 Text("Добавить", style = MaterialTheme.typography.headlineMedium)
+            }
+        }
+    }
+}
+@Composable
+fun SearchResults(search: String,
+                  name: MutableState<String>,
+                  kcal: MutableState<String>,
+                  fat: MutableState<String>,
+                  protein: MutableState<String>,
+                  carb: MutableState<String>,
+                  weight: MutableState<String>,
+                  isSearch: MutableState<Boolean>) {
+    val prods = remember { mutableStateListOf<ProductData>() } // Оставляем ссылку неизменной
+    val isLoading = remember { mutableStateOf(true) }
+
+    LaunchedEffect(search) {
+        isLoading.value = true
+        val results = dataService.fetchSearchResults(search) ?: emptyList() // Загружаем данные
+        prods.clear() // Очищаем список перед добавлением новых элементов
+        prods.addAll(results) // Добавляем элементы
+        isLoading.value = false
+    }
+
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(0.3f)
+            .background(Color(0xFFDFE0EA), RoundedCornerShape(20.dp))
+            .padding(vertical = 8.dp)
+    ) {
+        if (isLoading.value) {
+            LoadingScreen()
+        } else {
+            LazyColumn {
+                items(prods) { prod ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            prod.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color(0xFF3F424A),
+                            modifier = Modifier.clickable{
+                                isSearch.value = false
+                                name.value = prod.name
+                                fat.value = prod.fat.toString()
+                                carb.value = prod.carbohydrates.toString()
+                                protein.value = prod.protein.toString()
+                                kcal.value = prod.calories.toString()
+                                weight.value = "100.0"
+                            }
+                        )
+                        Spacer(
+                            Modifier
+                                .fillMaxWidth(0.88f)
+                                .height(2.dp)
+                                .background(Color(0x373F424A), RoundedCornerShape(1.dp))
+                        )
+                    }
+                }
             }
         }
     }
