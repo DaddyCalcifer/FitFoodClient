@@ -165,7 +165,7 @@ fun ParametersScreen(
                                         contentDescription = null,
                                         modifier = Modifier.size(32.dp)
                                     )
-                                    Text("Добавить", style = MaterialTheme.typography.headlineMedium)
+                                    Text("Добавить", style = MaterialTheme.typography.titleMedium)
                                     Icon(
                                         imageVector = Icons.Default.Add,
                                         contentDescription = null,
@@ -351,7 +351,7 @@ fun PlansScreen(
                                         contentDescription = null,
                                         modifier = Modifier.size(32.dp)
                                     )
-                                    Text("Построить план", style = MaterialTheme.typography.headlineMedium)
+                                    Text("Построить план", style = MaterialTheme.typography.titleMedium)
                                     Icon(
                                         imageVector = Icons.Default.Add,
                                         contentDescription = null,
@@ -393,10 +393,10 @@ fun UserDataItem(data: FitData, modifier: Modifier) {
         Spacer(modifier = Modifier.width(16.dp))
 
         Column {
-            Text(text = "Вес: ${data.weight} кг", style = MaterialTheme.typography.headlineSmall)
-            Text(text = "Рост: ${data.height} см", style = MaterialTheme.typography.headlineSmall)
-            Text(text = "Возраст: ${data.age} лет", style = MaterialTheme.typography.headlineSmall)
-            Text(text = "Активность: ${data.activity}", style = MaterialTheme.typography.headlineSmall)
+            Text(text = "Вес: ${data.weight} кг", style = MaterialTheme.typography.titleMedium)
+            Text(text = "Рост: ${data.height} см", style = MaterialTheme.typography.titleMedium)
+            Text(text = "Возраст: ${data.age} лет", style = MaterialTheme.typography.titleMedium)
+            Text(text = "Активность: ${data.activity}", style = MaterialTheme.typography.titleMedium)
         }
     }
 }
@@ -418,8 +418,8 @@ fun UserPlanItem(plan: FitPlan, modifier: Modifier) {
         Spacer(modifier = Modifier.width(16.dp))
 
         Column {
-            Text(text = "Пища: ${plan.dayKcal} ккал", style = MaterialTheme.typography.headlineSmall)
-            Text(text = "Вода: ${plan.waterMl} мл", style = MaterialTheme.typography.headlineSmall)
+            Text(text = "Пища: ${plan.dayKcal} ккал", style = MaterialTheme.typography.titleMedium)
+            Text(text = "Вода: ${plan.waterMl} мл", style = MaterialTheme.typography.titleMedium)
         }
     }
 }

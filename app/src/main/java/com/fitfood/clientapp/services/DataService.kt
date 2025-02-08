@@ -23,7 +23,7 @@ import java.io.IOException
 import java.util.UUID
 
 class DataService {
-    private val BASE_URL = "http://10.0.2.2:5059/api/"
+    private val BASE_URL = "https://fitfoodapi-6x5r.onrender.com/api/"
 
     fun sendFitData(fitData: FitData, token: String, onResponse: (Boolean) -> Unit) {
         val url = "${BASE_URL}user/data"

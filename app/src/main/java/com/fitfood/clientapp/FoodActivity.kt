@@ -121,7 +121,7 @@ fun FoodListScreen(
     ) {
         Text(
             text = "Употребленные продукты",
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
@@ -147,27 +147,27 @@ fun FoodListScreen(
                         ) {
                             Text(
                                 text = food.name,
-                                style = MaterialTheme.typography.headlineMedium,
-                                modifier = Modifier.padding(bottom = 8.dp)
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(bottom = 5.dp)
                             )
                             Text(
                                 text = "Масса: ${food.mass.toInt()} г",
-                                style = MaterialTheme.typography.headlineSmall,
+                                style = MaterialTheme.typography.titleMedium,
                                 modifier = Modifier.padding(bottom = 4.dp)
                             )
                             Text(
-                                text = "\uD83E\uDD69Б: ${
+                                text = "\uD83E\uDD69 Б: ${
                                     kotlin.math.round(
                                         food.protein100 * (food.mass / 100)
-                                    ).toInt()}г\t\uD83C\uDF54Ж: ${
+                                    ).toInt()}г \t\uD83C\uDF54 Ж: ${
                                     kotlin.math.round(
                                         food.fat100 * (food.mass / 100)
-                                    ).toInt()}г\t\uD83C\uDF5EУ: ${kotlin.math.round(food.carb100 * (food.mass / 100)).toInt()}г\n⚡ Ккал: ${
+                                    ).toInt()}г \t\uD83C\uDF5E У: ${kotlin.math.round(food.carb100 * (food.mass / 100)).toInt()}г\n⚡ Ккал: ${
                                     kotlin.math.round(
                                         food.kcal100 * (food.mass / 100)
                                     ).toInt()
                                 }",
-                                style = MaterialTheme.typography.headlineSmall
+                                style = MaterialTheme.typography.titleMedium
                             )
                         }
                         Icon(
@@ -311,17 +311,16 @@ fun AddProductForm(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(16.dp, 10.dp)
         ) {
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(vertical = 16.dp)
+                    .padding(vertical = 10.dp)
             ) {
                 Text(
                     text = "Добавить продукт",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    style = MaterialTheme.typography.titleLarge
                 )
 
                 // Поля для ручного ввода с использованием FitTextBox
@@ -336,18 +335,18 @@ fun AddProductForm(
                             icon = Icons.Default.FoodBank
                         )
                     }
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(5.dp))
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = null,
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(35.dp)
                             .align(alignment = Alignment.CenterVertically)
                             .clickable {
                                 isSearching.value = true
                             }
                     )
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(5.dp))
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = null,
@@ -401,19 +400,21 @@ fun AddProductForm(
                     icon = Icons.Default.WaterDrop,
                     keyboard = KeyboardType.Number
                 )
+                if(!isSearching.value)
                 Button(
                     onClick = { showBarcodeScanner = true },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(70.dp)
-                        .padding(vertical = 8.dp),
+                        .height(50.dp)
+                        .padding(vertical = 4.dp),
                     shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
                 ) {
-                    Text("Сканировать штрих-код", style = MaterialTheme.typography.headlineMedium)
+                    Text("Сканировать штрих-код", style = MaterialTheme.typography.titleMedium)
                 }
             }
             // Кнопка добавления
+            if(!isSearching.value)
             Button(
                 onClick = {
                     val massValue = mass.value.toDoubleOrNull() ?: 0.0
@@ -438,11 +439,11 @@ fun AddProductForm(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(70.dp),
+                    .height(50.dp),
                 shape = RoundedCornerShape(20.dp),
                 colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
             ) {
-                Text("Добавить", style = MaterialTheme.typography.headlineMedium)
+                Text("Добавить", style = MaterialTheme.typography.headlineSmall)
             }
         }
     }

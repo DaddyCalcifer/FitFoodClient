@@ -21,10 +21,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Blender
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.DinnerDining
 import androidx.compose.material.icons.filled.FoodBank
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.LocalPizza
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CircularProgressIndicator
@@ -73,18 +77,63 @@ fun NutritionSummaryScreen(plan: FitPlan, stats: FeedTotalStats, navController: 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp,12.dp,16.dp,0.dp)
+            .padding(16.dp,8.dp,16.dp,0.dp)
     ) {
         item {
-            Text(
-                text = "Сегодня",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(vertical = 5.dp)
-            )
+            Row (verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clickable
+                {
+
+                })
+            {
+                Text(
+                    text = "Сегодня ",
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.padding(vertical = 5.dp)
+                )
+                Icon(imageVector = Icons.Default.CalendarMonth,
+                    contentDescription = null,
+                    Modifier.size(30.dp))
+            }
             SummaryCard(plan, stats)
             Spacer(modifier = Modifier.height(16.dp))
         }
-
+        if(stats.ateKcal > plan.dayKcal * 1.05)
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xD3FF0000), RoundedCornerShape(20.dp))
+                        .padding(15.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                )
+                {
+                    Icon(imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        Modifier.size(55.dp), tint = Color(
+                        0xFFFFFFFF))
+                    Spacer(Modifier.width(16.dp))
+                    Column(verticalArrangement = Arrangement.SpaceBetween) {
+                        Text("Перебор калорий!", style = MaterialTheme.typography.headlineSmall,
+                            color = Color(0xFFFFFFFF))
+                        Text("Нужно сжечь ~${(stats.ateKcal - plan.dayKcal).toInt()} ккал", style = MaterialTheme.typography.bodyLarge,
+                            color = Color(0xFFFFFFFF))
+                        Spacer(Modifier.height(10.dp))
+                        Button(
+                            onClick = { navController.navigate("PhysicalData") },
+                            modifier = Modifier
+                                .padding(vertical = 4.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(Color(0xFFFFFFFF)),
+                        ) {
+                            Text("Подобрать\nупражнение", style = MaterialTheme.typography.bodyLarge,
+                                color = Color(0xD3FF0000))
+                        }
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+            }
         item {
             MealsSection(plan, stats, navController)
             Spacer(modifier = Modifier.height(16.dp))
@@ -123,6 +172,7 @@ fun SummaryCard(plan: FitPlan, stats: FeedTotalStats) {
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
                 CalorieInfo("\uD83D\uDE0B ${stats.ateKcal.toInt()}", "Съедено")
+                if(remainingKcal.toInt() > 0)
                 CalorieInfo("\uD83E\uDD0F ${remainingKcal.toInt()}", "Осталось")
                 CalorieInfo("\uD83D\uDCA7 ${plan.waterMl.toInt()}", "Вода (мл.)")
             }
@@ -133,7 +183,7 @@ fun SummaryCard(plan: FitPlan, stats: FeedTotalStats) {
 @Composable
 fun CalorieInfo(value: String, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = value, style = MaterialTheme.typography.headlineSmall)
+        Text(text = value, style = MaterialTheme.typography.titleLarge)
         Text(text = label, style = MaterialTheme.typography.bodyLarge)
     }
 }
@@ -145,23 +195,23 @@ fun MacronutrientsColumn(plan: FitPlan, stats: FeedTotalStats) {
     if(plan.carb_g <=0) plan.carb_g = 1.0;
     Column(
         modifier = Modifier
-            .padding(16.dp),
+            .padding(6.dp,16.dp,16.dp,6.dp),
         verticalArrangement = Arrangement.SpaceAround
     ) {
         MacronutrientInfo("\uD83E\uDD69\t\tБелки",
-            "${stats.ateProtein.toInt()} /  ${plan.protein_g.toInt()} г",
+            "${stats.ateProtein.toInt()} / ${plan.protein_g.toInt()} г",
             Color(0xFFFFFFFF),
             (stats.ateProtein.toInt() /  plan.protein_g.toInt()).toFloat())
-        Spacer(Modifier.height(15.dp))
+        Spacer(Modifier.height(12.dp))
 
         MacronutrientInfo("\uD83C\uDF54\t\tЖиры",
-            "${stats.ateFat.toInt()} /  ${plan.fat_g.toInt()} г",
+            "${stats.ateFat.toInt()} / ${plan.fat_g.toInt()} г",
             Color(0xFFf7b520),
             (stats.ateFat /  plan.fat_g).toFloat())
-        Spacer(Modifier.height(15.dp))
+        Spacer(Modifier.height(12.dp))
 
         MacronutrientInfo("\uD83C\uDF5E\t\tУглеводы",
-            "${stats.ateCarb.toInt()} /  ${plan.carb_g.toInt()} г",
+            "${stats.ateCarb.toInt()} / ${plan.carb_g.toInt()} г",
             Color(0xFF1ba5cc),
             (stats.ateCarb /  plan.carb_g).toFloat())
     }
@@ -170,13 +220,13 @@ fun MacronutrientsColumn(plan: FitPlan, stats: FeedTotalStats) {
 @Composable
 fun MacronutrientInfo(label: String, value: String, color: Color, progress: Float) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = label, style = MaterialTheme.typography.titleMedium)
+        Text(text = label, style = MaterialTheme.typography.titleSmall)
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(30.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .height(22.dp)
+                .clip(RoundedCornerShape(9.dp))
         ) {
             LinearProgressIndicator(
                 progress = { progress },
@@ -188,7 +238,7 @@ fun MacronutrientInfo(label: String, value: String, color: Color, progress: Floa
 
             Text(
                 text = value,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.align(Alignment.Center)
             )
         }
@@ -202,7 +252,7 @@ fun CircularCaloriesChart(plan: FitPlan, stats: FeedTotalStats) {
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .padding(16.dp)
-            .size(170.dp)
+            .size(150.dp)
     ) {
         CircularProgressIndicator(
             progress = {
@@ -222,7 +272,7 @@ fun CircularCaloriesChart(plan: FitPlan, stats: FeedTotalStats) {
             )
             Text(
                 text = "/ ${plan.dayKcal.toInt()} ккал",
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleSmall
             )
             Text(
                 text = "Съедено",
@@ -250,7 +300,7 @@ fun MealsSection(plan: FitPlan, stats: FeedTotalStats, navController: NavControl
 fun MealRow(meal: String, calories: String, icon: ImageVector, onMealClick: (String) -> Unit) {
     Row(
         modifier = Modifier
-            .background(Color(0x18315A16), RoundedCornerShape(20.dp))
+            .background(Color(0x18315A16), RoundedCornerShape(15.dp))
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .clickable { onMealClick(meal) },
@@ -262,11 +312,11 @@ fun MealRow(meal: String, calories: String, icon: ImageVector, onMealClick: (Str
             Icon(imageVector = icon, contentDescription = meal, Modifier.size(40.dp), tint = Color(0xFF1A300c))
             Spacer(modifier = Modifier.width(15.dp))
             Column {
-                Text(text = meal, style = MaterialTheme.typography.headlineSmall)
-                Text(text = calories, style = MaterialTheme.typography.bodyLarge)
+                Text(text = meal, style = MaterialTheme.typography.titleMedium)
+                Text(text = calories, style = MaterialTheme.typography.titleSmall)
             }
         }
-        IconButton(onClick = { onMealClick(meal) }, Modifier.size(60.dp)) {
+        IconButton(onClick = { onMealClick(meal) }, Modifier.size(40.dp)) {
             Icon(imageVector = Icons.Filled.KeyboardArrowRight, contentDescription = "Открыть $meal", Modifier.fillMaxSize(0.65f), tint = Color(0xFF1A300c))
         }
     }
