@@ -51,6 +51,8 @@ import com.fitfood.clientapp.NutritionSummaryScreen
 import com.fitfood.clientapp.ParametersScreen
 import com.fitfood.clientapp.PlansScreen
 import com.fitfood.clientapp.ProfileForm
+import com.fitfood.clientapp.SportSummaryScreen
+import com.fitfood.clientapp.TrainingPlanSummaryScreen
 import com.fitfood.clientapp.models.ActivityType
 import com.fitfood.clientapp.models.FeedAct
 import com.fitfood.clientapp.models.FeedStats
@@ -59,6 +61,7 @@ import com.fitfood.clientapp.models.FitData
 import com.fitfood.clientapp.models.FitPlan
 import com.fitfood.clientapp.models.FoodRequest
 import com.fitfood.clientapp.models.Gender
+import com.fitfood.clientapp.models.Sport.TrainingPlan
 import com.fitfood.clientapp.models.User
 import com.fitfood.clientapp.services.DataService
 import kotlinx.coroutines.launch
@@ -92,22 +95,49 @@ fun MainScreen(navController_: NavController?, context: Context?) {
                     ProfileScreen(navController_, LocalContext.current)
                 }
                 composable("PhysicalData") {
-                    //PhysicalDataScreen(context)
-                    Column(modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally)
-                    {
-                        Icon(
-                            imageVector = Icons.Default.Construction,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = Color.DarkGray
-                        )
-                        Text("Раздел в разработке", style = MaterialTheme.typography.headlineMedium)
-                    }
+                    SportSummaryScreen(navController)
                 }
                 composable("Nutrition") {
                     NutritionScreen(navController, context)
+                }
+                composable("trainingPlan/{id}",
+                    arguments = listOf(navArgument("id")
+                    { type = NavType.StringType }
+                    )) { backStackEntry ->
+                    val planId = backStackEntry.arguments?.getString("id") ?: "Unknown"
+                    val sharedPreferences: SharedPreferences =
+                        LocalContext.current.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                    val token = sharedPreferences.getString("jwt", "").orEmpty()
+
+                    var plan by remember { mutableStateOf<TrainingPlan?>(null) }
+                    var isLoading by remember { mutableStateOf(true) }
+                    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+                    LaunchedEffect(planId) {
+                        try {
+                            plan = dataService.fetchTrainingPlanById(planId, token)
+                            errorMessage = null
+                        } catch (e: Exception) {
+                            errorMessage = "Ошибка загрузки плана: ${e.message}"
+                            plan = null
+                        } finally {
+                            isLoading = false
+                        }
+                    }
+
+                    if (isLoading) {
+                        LoadingScreen()
+                    } else if (errorMessage != null) {
+                        Text(
+                            text = errorMessage!!,
+                            color = Color.Red,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    } else if (plan != null) {
+                        TrainingPlanSummaryScreen(plan!!)
+                    } else {
+                        Text("План тренировки не найден")
+                    }
                 }
                 composable("Nutrition/Detail") {
 

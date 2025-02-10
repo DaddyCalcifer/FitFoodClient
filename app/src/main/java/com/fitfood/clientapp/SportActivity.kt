@@ -1,0 +1,308 @@
+package com.fitfood.clientapp
+
+import android.content.Context
+import android.content.SharedPreferences
+import android.util.Log
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddReaction
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.Cable
+import androidx.compose.material.icons.filled.Cake
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Dining
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavController
+import com.fitfood.clientapp.models.FeedTotalStats
+import com.fitfood.clientapp.models.Sport.TrainingPlan
+import com.fitfood.clientapp.models.User
+import kotlinx.coroutines.launch
+
+@Composable
+fun SportSummaryScreen(navController: NavController) {
+    var isLoading by remember { mutableStateOf(true) }
+    val coroutineScope = rememberCoroutineScope()
+    var plans by remember { mutableStateOf<List<TrainingPlan>?>(null) }
+    var user by remember { mutableStateOf<User?>(null) }
+    var stats by remember { mutableStateOf<FeedTotalStats?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
+    val sharedPreferences: SharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+    val token = sharedPreferences.getString("jwt", "").orEmpty()
+
+    // Функция для загрузки планов
+    fun refreshPlans() {
+        coroutineScope.launch {
+            try {
+                plans = dataService.fetchTrainingPlans(token)
+                user = dataService.fetchUser(token)
+                stats = dataService.fetchTotalStats(token)
+                errorMessage = null
+            } catch (e: Exception) {
+                errorMessage = "Ошибка загрузки данных: ${e.message}"
+                plans = null
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    // Запускаем загрузку планов при первом запуске Composable
+    LaunchedEffect(Unit) {
+        refreshPlans()
+    }
+
+    // Отображение UI в зависимости от состояния
+    if (isLoading) {
+        LoadingScreen() // Показываем индикатор загрузки
+    } else if (errorMessage != null) {
+        Text(
+            text = errorMessage!!,
+            color = Color.Red,
+            modifier = Modifier.padding(16.dp)
+        )
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp, 8.dp, 16.dp, 0.dp)
+        ) {
+            item {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { }
+                ) {
+                    Text(
+                        text = "Сегодня ",
+                        style = MaterialTheme.typography.headlineMedium,
+                        modifier = Modifier.padding(vertical = 5.dp)
+                    )
+                    Icon(
+                        imageVector = Icons.Default.CalendarMonth,
+                        contentDescription = null,
+                        Modifier.size(30.dp)
+                    )
+                }
+            }
+            item {
+                HealthStatsScreen(stats!!, user!!)
+            }
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+                plans?.let { trainingPlans ->
+                    TrainingPlansList(navController, trainingPlans)
+                } ?: run {
+                    Text("Нет доступных планов тренировок")
+                }
+            }
+        }
+    }
+}
+@Composable
+fun StatsImgText(icon: ImageVector, text: String)
+{
+    Row (verticalAlignment = Alignment.CenterVertically)
+    {
+        Icon(imageVector = icon,
+            contentDescription = null,
+            Modifier.size(32.dp))
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(vertical = 5.dp)
+        )
+    }
+}
+
+@Composable
+fun HealthStatsScreen(stats: FeedTotalStats, user: User) {
+    val hasTrain = remember { mutableStateOf(false) }
+
+    val needAte = (user.plans.last().dayKcal-stats.ateKcal).toInt()
+
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()) {
+        Column(Modifier
+            .fillMaxWidth(0.49f)
+            .fillMaxHeight()) {
+            StatsImgText(Icons.Default.Cake, "Съедено: ${stats.ateKcal.toInt()} ккал")
+            Spacer(modifier = Modifier.height(20.dp))
+            if(needAte > 0) {
+                StatsImgText(Icons.Default.Dining, "Осталось: ${needAte} ккал")
+            } else {
+                StatsImgText(Icons.Default.Warning, "Перебор: ${needAte*-1} ккал")
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+            StatsImgText(Icons.Default.Cable, "Пройдено:\n10000\t\t\uD83D\uDC63\n10 км\t\t\uD83C\uDFC1")
+        }
+        Spacer(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(4.dp)
+                .background(Color.DarkGray, RoundedCornerShape(2.dp))
+        )
+        // Правая колонка с прогрессом тренировки
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .background(Color(0x18315A16), shape = RoundedCornerShape(20.dp))
+                .padding(10.dp)
+        ) {
+            if(hasTrain.value) {
+                Text(
+                    text = "Прогресс\nтренировки:",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(vertical = 5.dp)
+                )
+                TrainingProgressGrid(progress = 55) // Пример прогресса 20%
+                Button(
+                    onClick = { hasTrain.value = false},
+                    modifier = Modifier
+                        .fillMaxWidth(0.82f)
+                        .height(40.dp),
+                    shape = RoundedCornerShape(15.dp),
+                    colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
+                ) {
+                    Text("Открыть", style = MaterialTheme.typography.titleMedium)
+                }
+            }
+            else{
+                Text(
+                    text = "Выбирайте программу тренировок и начинайте заниматься сейчас!",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(vertical = 5.dp)
+                )
+                Spacer(Modifier.height(15.dp))
+                Icon(imageVector = Icons.Default.ArrowDownward,
+                    contentDescription = null,
+                    Modifier
+                        .size(45.dp)
+                        .clickable {
+                            hasTrain.value = true
+                        })
+            }
+        }
+
+    }
+}
+
+
+@Composable
+fun TrainingProgressGrid(progress: Int) {
+    val filledCells = (progress / 4).coerceAtMost(25) // Максимум 25 клеток (5x5)
+    val gridSize = 5
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        for (row in 0 until gridSize) {
+            Row {
+                for (col in 0 until gridSize) {
+                    val cellIndex = row * gridSize + col
+                    val cellColor = if (cellIndex < filledCells) Color(0xFF5E953B) else Color.Gray
+
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .padding(2.dp)
+                            .background(cellColor, RoundedCornerShape(4.dp))
+                    )
+                }
+            }
+        }
+    }
+}
+@Composable
+fun TrainingPlansList(navController: NavController, plans: List<TrainingPlan>)
+{
+    Column()
+    {
+        StatsImgText(Icons.Default.FitnessCenter, "Программы тренировок")
+        Spacer(Modifier.height(10.dp))
+        for(p in plans) {
+            PlanCard(navController, p)
+            Spacer(Modifier.height(16.dp))
+            Log.i("TPlan", "${p.name} был загружен")
+        }
+    }
+}
+@Composable
+fun PlanCard(navController: NavController, plan: TrainingPlan)
+{
+    Box(modifier = Modifier
+        .fillMaxWidth()
+        .background(Color(0x18315A16), shape = RoundedCornerShape(20.dp))
+        .clickable {
+            navController.navigate("trainingPlan/${plan.id}")
+        })
+    {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(10.dp),
+            horizontalArrangement = Arrangement.Start
+        )
+        {
+            Icon(
+                imageVector = Icons.Default.AddReaction,
+                contentDescription = null,
+                Modifier.size(45.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Column {
+                Text(plan.name, style = MaterialTheme.typography.titleLarge)
+                Row{
+                    Text("От: ", style = MaterialTheme.typography.bodyLarge)
+                    Text("  FitFood  ",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White,
+                        modifier = Modifier
+                            .background(color = Color(0xFF5E953B), RoundedCornerShape(10.dp)))
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(plan.description, style = MaterialTheme.typography.bodyLarge)
+            }
+        }
+    }
+}

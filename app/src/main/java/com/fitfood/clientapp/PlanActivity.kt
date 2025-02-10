@@ -172,8 +172,9 @@ fun SummaryCard(plan: FitPlan, stats: FeedTotalStats) {
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
                 CalorieInfo("\uD83D\uDE0B ${stats.ateKcal.toInt()}", "Съедено")
-                if(remainingKcal.toInt() > 0)
-                CalorieInfo("\uD83E\uDD0F ${remainingKcal.toInt()}", "Осталось")
+                if(remainingKcal.toInt() > 0) {
+                    CalorieInfo("\uD83E\uDD0F ${remainingKcal.toInt()}", "Осталось")
+                }
                 CalorieInfo("\uD83D\uDCA7 ${plan.waterMl.toInt()}", "Вода (мл.)")
             }
         }

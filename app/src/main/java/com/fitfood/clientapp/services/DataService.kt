@@ -9,6 +9,7 @@ import com.fitfood.clientapp.models.FeedTotalStats
 import com.fitfood.clientapp.models.FitData
 import com.fitfood.clientapp.models.FoodRequest
 import com.fitfood.clientapp.models.ProductData
+import com.fitfood.clientapp.models.Sport.TrainingPlan
 import com.fitfood.clientapp.models.User
 import com.fitfood.clientapp.models.requests.GeneratePlanRequest
 import com.fitfood.clientapp.services.AuthService.RegisterRequest
@@ -165,6 +166,48 @@ class DataService {
             }
         }
     }
+
+
+    suspend fun fetchTrainingPlans(token: String): List<TrainingPlan>? {
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .url(BASE_URL + "sport/plans")
+            .addHeader("Authorization", "Bearer $token")
+            .build()
+
+        return withContext(Dispatchers.IO) {
+            val response: Response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val responseBody = response.body?.string()
+                responseBody?.let {
+                    Gson().fromJson(it, Array<TrainingPlan>::class.java).toList()
+                }
+            } else {
+                null
+            }
+        }
+    }
+
+    suspend fun fetchTrainingPlanById(planId: String, userId: String): TrainingPlan? {
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .url(BASE_URL + "sport/plans/$planId")
+            .addHeader("Authorization", "Bearer $userId")
+            .build()
+
+        return withContext(Dispatchers.IO) {
+            val response: Response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val responseBody = response.body?.string()
+                responseBody?.let {
+                    Gson().fromJson(it, TrainingPlan::class.java)
+                }
+            } else {
+                null
+            }
+        }
+    }
+
     suspend fun fetchTodayFeedsByType(token: String, type: String): List<FeedAct>? {
         val client = OkHttpClient()
         val request = Request.Builder()
