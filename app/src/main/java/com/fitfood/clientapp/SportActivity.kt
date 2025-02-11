@@ -5,47 +5,19 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddReaction
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.Cable
-import androidx.compose.material.icons.filled.Cake
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Dining
-import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.fitfood.clientapp.models.FeedTotalStats
 import com.fitfood.clientapp.models.Sport.TrainingPlan
@@ -71,11 +43,16 @@ fun SportSummaryScreen(navController: NavController) {
             try {
                 plans = dataService.fetchTrainingPlans(token)
                 user = dataService.fetchUser(token)
-                stats = dataService.fetchTotalStats(token)
+                if (user?.plans?.isNotEmpty() == true) {
+                    stats = dataService.fetchTotalStats(token)
+                }
                 errorMessage = null
             } catch (e: Exception) {
                 errorMessage = "Ошибка загрузки данных: ${e.message}"
+                Log.e("SportSummaryScreen", "Ошибка при загрузке данных", e)
                 plans = null
+                user = null
+                stats = null
             } finally {
                 isLoading = false
             }
@@ -120,27 +97,30 @@ fun SportSummaryScreen(navController: NavController) {
                 }
             }
             item {
-                HealthStatsScreen(stats!!, user!!)
+                stats?.let { safeStats ->
+                    user?.let { safeUser ->
+                        HealthStatsScreen(safeStats, safeUser, navController)
+                    }
+                } ?: run {
+                    HealthStatsPlaceholder(navController)
+                }
             }
             item {
                 Spacer(modifier = Modifier.height(16.dp))
                 plans?.let { trainingPlans ->
                     TrainingPlansList(navController, trainingPlans)
                 } ?: run {
-                    Text("Нет доступных планов тренировок")
+                    StatsImgText(Icons.Default.SearchOff,"Нет доступных планов тренировок")
                 }
             }
         }
     }
 }
+
 @Composable
-fun StatsImgText(icon: ImageVector, text: String)
-{
-    Row (verticalAlignment = Alignment.CenterVertically)
-    {
-        Icon(imageVector = icon,
-            contentDescription = null,
-            Modifier.size(32.dp))
+fun StatsImgText(icon: ImageVector, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(imageVector = icon, contentDescription = null, Modifier.size(32.dp))
         Spacer(modifier = Modifier.width(10.dp))
         Text(
             text = text,
@@ -151,27 +131,59 @@ fun StatsImgText(icon: ImageVector, text: String)
 }
 
 @Composable
-fun HealthStatsScreen(stats: FeedTotalStats, user: User) {
+fun HealthStatsScreen(stats: FeedTotalStats, user: User, navController: NavController) {
     val hasTrain = remember { mutableStateOf(false) }
 
-    val needAte = (user.plans.last().dayKcal-stats.ateKcal).toInt()
+    val needAte = if (user.plans.isNotEmpty()) {
+        (user.plans.last().dayKcal - stats.ateKcal).toInt()
+    } else {
+        0
+    }
 
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()) {
-        Column(Modifier
-            .fillMaxWidth(0.49f)
-            .fillMaxHeight()) {
-            StatsImgText(Icons.Default.Cake, "Съедено: ${stats.ateKcal.toInt()} ккал")
-            Spacer(modifier = Modifier.height(20.dp))
-            if(needAte > 0) {
-                StatsImgText(Icons.Default.Dining, "Осталось: ${needAte} ккал")
-            } else {
-                StatsImgText(Icons.Default.Warning, "Перебор: ${needAte*-1} ккал")
+    Row(modifier = Modifier.fillMaxWidth()) {
+        if (user.plans.isNotEmpty()) {
+            Column(
+                Modifier
+                    .fillMaxWidth(0.49f)
+                    .fillMaxHeight()
+            ) {
+                StatsImgText(Icons.Default.Cake, "Съедено: ${stats.ateKcal.toInt()} ккал")
+                Spacer(modifier = Modifier.height(20.dp))
+                if (needAte > 0) {
+                    StatsImgText(Icons.Default.Dining, "Осталось: $needAte ккал")
+                } else {
+                    StatsImgText(Icons.Default.Warning, "Перебор: ${needAte * -1} ккал")
+                }
+                Spacer(modifier = Modifier.height(20.dp))
+                StatsImgText(
+                    Icons.Default.Cable,
+                    "Пройдено:\n10000\t\t\uD83D\uDC63\n10 км\t\t\uD83C\uDFC1"
+                )
             }
-            Spacer(modifier = Modifier.height(20.dp))
-            StatsImgText(Icons.Default.Cable, "Пройдено:\n10000\t\t\uD83D\uDC63\n10 км\t\t\uD83C\uDFC1")
+        } else {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .background(Color(0x18315A16), shape = RoundedCornerShape(20.dp))
+                    .padding(10.dp)
+            ) {
+                Text(
+                    text = "Постройте свой план питания прямо сейчас!",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(vertical = 5.dp)
+                )
+                Spacer(Modifier.height(25.dp))
+                Button(
+                    onClick = { navController.navigate("Nutrition") },
+                    modifier = Modifier
+                        .fillMaxWidth(0.82f)
+                        .height(40.dp),
+                    shape = RoundedCornerShape(15.dp),
+                    colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
+                ) {
+                    Text("Открыть", style = MaterialTheme.typography.titleMedium)
+                }
+            }
         }
         Spacer(
             modifier = Modifier
@@ -186,7 +198,7 @@ fun HealthStatsScreen(stats: FeedTotalStats, user: User) {
                 .background(Color(0x18315A16), shape = RoundedCornerShape(20.dp))
                 .padding(10.dp)
         ) {
-            if(hasTrain.value) {
+            if (hasTrain.value) {
                 Text(
                     text = "Прогресс\nтренировки:",
                     style = MaterialTheme.typography.titleLarge,
@@ -194,7 +206,7 @@ fun HealthStatsScreen(stats: FeedTotalStats, user: User) {
                 )
                 TrainingProgressGrid(progress = 55) // Пример прогресса 20%
                 Button(
-                    onClick = { hasTrain.value = false},
+                    onClick = { hasTrain.value = false },
                     modifier = Modifier
                         .fillMaxWidth(0.82f)
                         .height(40.dp),
@@ -203,24 +215,76 @@ fun HealthStatsScreen(stats: FeedTotalStats, user: User) {
                 ) {
                     Text("Открыть", style = MaterialTheme.typography.titleMedium)
                 }
-            }
-            else{
+            } else {
                 Text(
                     text = "Выбирайте программу тренировок и начинайте заниматься сейчас!",
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(vertical = 5.dp)
                 )
                 Spacer(Modifier.height(15.dp))
-                Icon(imageVector = Icons.Default.ArrowDownward,
+                Icon(
+                    imageVector = Icons.Default.ArrowDownward,
                     contentDescription = null,
                     Modifier
                         .size(45.dp)
-                        .clickable {
-                            hasTrain.value = true
-                        })
+                        .clickable { hasTrain.value = true }
+                )
             }
         }
+    }
+}
 
+@Composable
+fun HealthStatsPlaceholder(navController: NavController) {
+
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .background(Color(0x18315A16), shape = RoundedCornerShape(20.dp))
+                .padding(10.dp)
+        ) {
+            Text(
+                text = "Постройте свой план питания прямо сейчас!",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(vertical = 5.dp)
+            )
+            Spacer(Modifier.height(25.dp))
+            Button(
+                onClick = { navController.navigate("Nutrition") },
+                modifier = Modifier
+                    .fillMaxWidth(0.82f)
+                    .height(40.dp),
+                shape = RoundedCornerShape(15.dp),
+                colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
+            ) {
+                Text("Открыть", style = MaterialTheme.typography.titleMedium)
+            }
+        }
+    }
+    Spacer(
+        modifier = Modifier
+            .fillMaxHeight()
+            .height(16.dp)
+    )
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .background(Color(0x18315A16), shape = RoundedCornerShape(20.dp))
+            .padding(10.dp)
+    ) {
+        Text(
+            text = "Выбирайте программу тренировок и начинайте заниматься сейчас!",
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(vertical = 5.dp)
+        )
+        Spacer(Modifier.height(15.dp))
+        Icon(
+            imageVector = Icons.Default.ArrowDownward,
+            contentDescription = null,
+            Modifier
+                .size(45.dp)
+        )
     }
 }
 
@@ -253,37 +317,34 @@ fun TrainingProgressGrid(progress: Int) {
         }
     }
 }
+
 @Composable
-fun TrainingPlansList(navController: NavController, plans: List<TrainingPlan>)
-{
-    Column()
-    {
+fun TrainingPlansList(navController: NavController, plans: List<TrainingPlan>) {
+    Column {
         StatsImgText(Icons.Default.FitnessCenter, "Программы тренировок")
         Spacer(Modifier.height(10.dp))
-        for(p in plans) {
+        for (p in plans) {
             PlanCard(navController, p)
             Spacer(Modifier.height(16.dp))
             Log.i("TPlan", "${p.name} был загружен")
         }
     }
 }
+
 @Composable
-fun PlanCard(navController: NavController, plan: TrainingPlan)
-{
-    Box(modifier = Modifier
-        .fillMaxWidth()
-        .background(Color(0x18315A16), shape = RoundedCornerShape(20.dp))
-        .clickable {
-            navController.navigate("trainingPlan/${plan.id}")
-        })
-    {
+fun PlanCard(navController: NavController, plan: TrainingPlan) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0x18315A16), shape = RoundedCornerShape(20.dp))
+            .clickable { navController.navigate("trainingPlan/${plan.id}") }
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(10.dp),
             horizontalArrangement = Arrangement.Start
-        )
-        {
+        ) {
             Icon(
                 imageVector = Icons.Default.AddReaction,
                 contentDescription = null,
@@ -292,13 +353,15 @@ fun PlanCard(navController: NavController, plan: TrainingPlan)
             Spacer(modifier = Modifier.width(10.dp))
             Column {
                 Text(plan.name, style = MaterialTheme.typography.titleLarge)
-                Row{
+                Row {
                     Text("От: ", style = MaterialTheme.typography.bodyLarge)
-                    Text("  FitFood  ",
+                    Text(
+                        "  FitFood  ",
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color.White,
                         modifier = Modifier
-                            .background(color = Color(0xFF5E953B), RoundedCornerShape(10.dp)))
+                            .background(color = Color(0xFF5E953B), RoundedCornerShape(10.dp))
+                    )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(plan.description, style = MaterialTheme.typography.bodyLarge)

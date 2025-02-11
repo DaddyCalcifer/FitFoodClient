@@ -2,7 +2,6 @@ package com.fitfood.clientapp
 
 import MainScreen
 import android.content.Context
-import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
@@ -36,7 +35,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.navigation.NavController
-import androidx.navigation.NavDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -56,34 +54,36 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        //setContent {
-        //    ClientAppTheme() {
-        //        AppNavHost(this@MainActivity, "loading")
-        //    }
-        //}
-
         CoroutineScope(Dispatchers.IO).launch {
-            val isTokenActive = checkJwtToken()
+            val isTokenActive = try {
+                checkJwtToken()
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Ошибка при проверке токена", e)
+                false
+            }
             val startDestination = if (isTokenActive) "main" else "auth"
 
             withContext(Dispatchers.Main) {
                 setContent {
-                    ClientAppTheme() {
+                    ClientAppTheme {
                         AppNavHost(this@MainActivity, startDestination)
                     }
                 }
             }
         }
     }
+
     private suspend fun checkJwtToken(): Boolean {
         val sharedPreferences: SharedPreferences = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
         val token = sharedPreferences.getString("jwt", "").toString()
-        Log.e("loging","jwt: (${token})")
-        if(token == "") return false
+        Log.e("logging", "jwt: ($token)")
+        if (token.isEmpty()) return false
+
         return try {
             val response = authService.checkToken(token)
             response.code != 401
         } catch (e: Exception) {
+            Log.e("MainActivity", "Ошибка при проверке токена", e)
             false
         }
     }
@@ -100,8 +100,8 @@ fun AppNavHost(context: Context, startDestination: String) {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = startDestination) {
-        composable("loading") { LoadingScreen()}
-        composable("auth") { AuthScreen(navController, context ) }
+        composable("loading") { LoadingScreen() }
+        composable("auth") { AuthScreen(navController, context) }
         composable("main") { MainScreen(navController, context) }
     }
 }
@@ -143,7 +143,7 @@ fun AuthScreen(navController: NavController?, context: Context?) {
         if (isLogin) {
             LoginForm(navController, context)
         } else {
-            RegisterForm()
+            RegisterForm(navController, context)
         }
     }
 }
@@ -154,28 +154,44 @@ fun LoginForm(navController: NavController?, context: Context?) {
     val password = remember { mutableStateOf(userAuth.password) }
     var jwt = remember { mutableStateOf("") }
     var showDialog by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false)}
-    var filledAlready by remember { mutableStateOf(false)}
+    var isLoading by remember { mutableStateOf(false) }
+    var filledAlready by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    if(context != null) {
+    if (context != null) {
         val sharedPreferences: SharedPreferences =
             context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
         auth_data = sharedPreferences.getString("auth", "").toString()
     }
-    if(auth_data != "") {
+    if (auth_data != "") {
         rememberData.login = auth_data.split(' ')[0]
         rememberData.password = auth_data.split(' ')[1]
     }
-    if(rememberData.login != "" && !filledAlready)
-    {
+    if (rememberData.login != "" && !filledAlready) {
         login.value = rememberData.login
         password.value = rememberData.password
         filledAlready = true
     }
-    Column(modifier =
-    Modifier
-        .fillMaxSize()
-        .background(Color.Transparent)
+    if (errorMessage != null) {
+        AlertDialog(
+            onDismissRequest = { errorMessage = null },
+            title = { Text("Ошибка") },
+            text = { Text(errorMessage!!) },
+            confirmButton = {
+                Button(
+                    onClick = { errorMessage = null },
+                    colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)))
+                    {
+                        Text("OK")
+                    }
+            }
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Transparent)
     ) {
         Column(
             Modifier.fillMaxHeight(0.8f),
@@ -187,7 +203,7 @@ fun LoginForm(navController: NavController?, context: Context?) {
                 contentScale = ContentScale.Fit
             )
             Text("Логин", style = MaterialTheme.typography.titleMedium)
-            FitTextBox(login, "Введите логин или e-mail",Icons.Default.Face, KeyboardType.Email)
+            FitTextBox(login, "Введите логин или e-mail", Icons.Default.Face, KeyboardType.Email)
 
             Text("Пароль", style = MaterialTheme.typography.titleMedium)
             FitPasswordBox(password)
@@ -200,36 +216,40 @@ fun LoginForm(navController: NavController?, context: Context?) {
         ) {
             Button(
                 onClick = {
-                    if(navController != null && context != null) {
+                    if (navController != null && context != null) {
                         isLoading = true
 
                         authService.authorizeUser(login.value, password.value) { response ->
-                            println("Authorization response: $response")
+                            try {
+                                val gson = Gson()
+                                val authResponse = gson.fromJson(response, ResponseJSON::class.java)
 
-                            val gson = Gson()
-                            val authResponse = gson.fromJson(response, ResponseJSON::class.java)
+                                jwt.value = authResponse.message
+                                isLoading = false
 
-                            jwt.value = authResponse.message
-                            isLoading = false
+                                if (authResponse.value.isNotEmpty()) {
+                                    val sharedPreferences: SharedPreferences =
+                                        context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                                    sharedPreferences.edit()
+                                        .putString("auth", "${login.value} ${password.value}")
+                                        .apply()
+                                    sharedPreferences.edit()
+                                        .putString("jwt", authResponse.value)
+                                        .apply()
 
-                            if (authResponse.value.isNotEmpty()) {
-
-                                val sharedPreferences: SharedPreferences =
-                                    context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-                                sharedPreferences.edit()
-                                    .putString("auth", "${login.value} ${password.value}")
-                                sharedPreferences.edit()
-                                    .putString("jwt", authResponse.value).apply()
-
-                                // Переход к MainScreen через NavController
-                                // Переключаемся на главный поток для навигации
-                                (context as? ComponentActivity)?.runOnUiThread {
-                                    navController.navigate("main") {
-                                        popUpTo("auth") { inclusive = true }
+                                    // Переход к MainScreen через NavController
+                                    (context as? ComponentActivity)?.runOnUiThread {
+                                        navController.navigate("main") {
+                                            popUpTo("auth") { inclusive = true }
+                                        }
                                     }
+                                } else {
+                                    errorMessage = "Ошибка авторизации: ${jwt.value}"
                                 }
-                            } else {
-                                showDialog = true
+                            } catch (e: Exception) {
+                                isLoading = false
+                                errorMessage = "Ошибка при обработке ответа сервера: ${e.message}"
+                                Log.e("LoginForm", "Ошибка при авторизации", e)
                             }
                         }
                     }
@@ -260,22 +280,41 @@ fun LoginForm(navController: NavController?, context: Context?) {
         }
     }
 }
+
 @Composable
-fun RegisterForm() {
+fun RegisterForm(navController: NavController?, context: Context?) {
     var login = remember { mutableStateOf(userRegister.username) }
     var email = remember { mutableStateOf(userRegister.email) }
     var password = remember { mutableStateOf(userRegister.password) }
     var confirmPassword = remember { mutableStateOf("") }
     var response_ = remember { mutableStateOf("") }
     var showDialog by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false)}
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    // AlertDialog для отображения ошибок
+    if (errorMessage != null) {
+        AlertDialog(
+            onDismissRequest = { errorMessage = null },
+            title = { Text("Ошибка") },
+            text = { Text(errorMessage!!) },
+            confirmButton = {
+                Button(
+                    onClick = { errorMessage = null },
+                    colors = ButtonDefaults.buttonColors(Color(0xFF5E953B))
+                ) {
+                    Text("OK")
+                }
+            }
+        )
+    }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Text("Логин", style = MaterialTheme.typography.titleMedium)
-        FitTextBox(login, "Введите ваш псевдним" ,Icons.Default.Face)
+        FitTextBox(login, "Введите ваш псевдоним", Icons.Default.Face)
 
         Text("Email", style = MaterialTheme.typography.titleMedium)
-        FitTextBox(email, "Введите ваш e-mail" ,Icons.Default.Email, KeyboardType.Email)
+        FitTextBox(email, "Введите ваш e-mail", Icons.Default.Email, KeyboardType.Email)
 
         Text("Пароль", style = MaterialTheme.typography.titleMedium)
         FitPasswordBox(password)
@@ -293,14 +332,18 @@ fun RegisterForm() {
                 onClick = {
                     isLoading = true
                     authService.registerUser(login.value, password.value, email.value) { response ->
-                        println("Registration response: $response")
-                        val gson = Gson()
-                        val regResponse = gson.fromJson(response, ResponseJSON::class.java)
+                        try {
+                            val gson = Gson()
+                            val regResponse = gson.fromJson(response, ResponseJSON::class.java)
 
-                        // Сохраняем JWT и показываем сообщение
-                        response_.value = regResponse.message
-                        showDialog = true
-                        isLoading = false
+                            response_.value = regResponse.message
+                            showDialog = true
+                            isLoading = false
+                        } catch (e: Exception) {
+                            isLoading = false
+                            errorMessage = "Ошибка при регистрации: ${e.message}"
+                            Log.e("RegisterForm", "Ошибка при регистрации", e)
+                        }
                     }
                 },
                 modifier = Modifier
@@ -400,52 +443,6 @@ fun FitPasswordBox(password: MutableState<String>) {
             focusedIndicatorColor = Color.Transparent
         )
     )
-}
-@Composable
-fun FitButtonImage(text: String,
-                   img: ImageVector,
-                   onClick: () -> Unit,
-                   background: Color = Color.DarkGray,
-                   textColor: Color = Color.White)
-{
-    Button(onClick = onClick,
-        Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = ButtonDefaults.buttonColors(background)
-    ) { Row(Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically) {
-        Icon (imageVector = img, contentDescription = "")
-        Text(text, color = textColor)
-        Icon (imageVector = img, contentDescription = "", tint = Color.Transparent)
-    } }
-}
-@Composable
-fun FitButtonImage(text: String,
-                   img: Painter,
-                   onClick: () -> Unit,
-                   background: Color = Color.DarkGray,
-                   textColor: Color = Color.White)
-{
-    Button(onClick = onClick,
-        Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = ButtonDefaults.buttonColors(background)
-    ) { Row(Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically) {
-        Icon(painter = img, contentDescription = "")
-        Text(text, color = textColor)
-        Text("   ")
-    } }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun LoginFormPreview() {
-    ClientAppTheme() {
-        AuthScreen(null, null);
-    }
 }
 
 @Composable

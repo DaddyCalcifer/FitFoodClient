@@ -193,7 +193,7 @@ fun BottomNavigationBar(navController: NavController) {
     NavigationBar(
         containerColor = Color(0xFF5E953B),
         contentColor = Color.White,
-        modifier = Modifier.height(100.dp)
+        modifier = Modifier.height(80.dp)
     ) {
 
         NavigationBarItem(
