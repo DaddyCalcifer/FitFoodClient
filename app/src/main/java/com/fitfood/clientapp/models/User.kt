@@ -1,5 +1,6 @@
 package com.fitfood.clientapp.models
 
+import com.fitfood.clientapp.models.Sport.Training
 import java.util.UUID
 
 data class User(

@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.fitfood.clientapp.models.FeedTotalStats
+import com.fitfood.clientapp.models.Sport.Training
 import com.fitfood.clientapp.models.Sport.TrainingPlan
 import com.fitfood.clientapp.models.User
 import kotlinx.coroutines.launch
@@ -29,6 +30,7 @@ fun SportSummaryScreen(navController: NavController) {
     var isLoading by remember { mutableStateOf(true) }
     val coroutineScope = rememberCoroutineScope()
     var plans by remember { mutableStateOf<List<TrainingPlan>?>(null) }
+    var trainings by remember { mutableStateOf<List<Training>?>(null) }
     var user by remember { mutableStateOf<User?>(null) }
     var stats by remember { mutableStateOf<FeedTotalStats?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -42,6 +44,7 @@ fun SportSummaryScreen(navController: NavController) {
         coroutineScope.launch {
             try {
                 plans = dataService.fetchTrainingPlans(token)
+                trainings = dataService.fetchTrainings(token)
                 user = dataService.fetchUser(token)
                 if (user?.plans?.isNotEmpty() == true) {
                     stats = dataService.fetchTotalStats(token)
@@ -99,7 +102,7 @@ fun SportSummaryScreen(navController: NavController) {
             item {
                 stats?.let { safeStats ->
                     user?.let { safeUser ->
-                        HealthStatsScreen(safeStats, safeUser, navController)
+                        HealthStatsScreen(safeStats, safeUser, trainings, navController)
                     }
                 } ?: run {
                     HealthStatsPlaceholder(navController)
@@ -131,8 +134,8 @@ fun StatsImgText(icon: ImageVector, text: String) {
 }
 
 @Composable
-fun HealthStatsScreen(stats: FeedTotalStats, user: User, navController: NavController) {
-    val hasTrain = remember { mutableStateOf(false) }
+fun HealthStatsScreen(stats: FeedTotalStats, user: User, trains: List<Training>?, navController: NavController) {
+    val hasTrain = trains!!.isNotEmpty()
 
     val needAte = if (user.plans.isNotEmpty()) {
         (user.plans.last().dayKcal - stats.ateKcal).toInt()
@@ -198,15 +201,29 @@ fun HealthStatsScreen(stats: FeedTotalStats, user: User, navController: NavContr
                 .background(Color(0x18315A16), shape = RoundedCornerShape(20.dp))
                 .padding(10.dp)
         ) {
-            if (hasTrain.value) {
+            if (hasTrain) {
                 Text(
                     text = "Прогресс\nтренировки:",
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(vertical = 5.dp)
                 )
-                TrainingProgressGrid(progress = 55) // Пример прогресса 20%
+                var doneSets = 0
+                var leftSets = 0
+                for(ex in trains.last().exercises)
+                {
+                    for(set in ex.sets)
+                    {
+                        if(set.isCompleted)
+                            doneSets++
+                        else
+                            leftSets++
+                    }
+                }
+                val prog = (doneSets.toDouble()/(doneSets+leftSets).toDouble()*100)
+                Log.i("Progress", prog.toString())
+                TrainingProgressGrid(progress = prog.toInt())
                 Button(
-                    onClick = { hasTrain.value = false },
+                    onClick = { navController.navigate("trainings/${trains.last().id}") },
                     modifier = Modifier
                         .fillMaxWidth(0.82f)
                         .height(40.dp),
@@ -227,7 +244,6 @@ fun HealthStatsScreen(stats: FeedTotalStats, user: User, navController: NavContr
                     contentDescription = null,
                     Modifier
                         .size(45.dp)
-                        .clickable { hasTrain.value = true }
                 )
             }
         }
@@ -291,8 +307,8 @@ fun HealthStatsPlaceholder(navController: NavController) {
 
 @Composable
 fun TrainingProgressGrid(progress: Int) {
-    val filledCells = (progress / 4).coerceAtMost(25) // Максимум 25 клеток (5x5)
-    val gridSize = 5
+    val filledCells = (progress / 1).coerceAtMost(100)
+    val gridSize = 10
 
     Column(
         modifier = Modifier
@@ -308,9 +324,9 @@ fun TrainingProgressGrid(progress: Int) {
 
                     Box(
                         modifier = Modifier
-                            .size(24.dp)
-                            .padding(2.dp)
-                            .background(cellColor, RoundedCornerShape(4.dp))
+                            .size(12.dp)
+                            .padding(1.dp)
+                            .background(cellColor, RoundedCornerShape(1.dp))
                     )
                 }
             }
