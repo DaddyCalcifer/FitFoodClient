@@ -135,7 +135,7 @@ fun StatsImgText(icon: ImageVector, text: String) {
 
 @Composable
 fun HealthStatsScreen(stats: FeedTotalStats, user: User, trains: List<Training>?, navController: NavController) {
-    val hasTrain = trains!!.isNotEmpty()
+    val hasTrain = trains?.isNotEmpty() ?: false
 
     val needAte = if (user.plans.isNotEmpty()) {
         (user.plans.last().dayKcal - stats.ateKcal).toInt()
@@ -209,7 +209,7 @@ fun HealthStatsScreen(stats: FeedTotalStats, user: User, trains: List<Training>?
                 )
                 var doneSets = 0
                 var leftSets = 0
-                for(ex in trains.last().exercises)
+                for(ex in trains?.last()?.exercises!!)
                 {
                     for(set in ex.sets)
                     {
@@ -220,7 +220,7 @@ fun HealthStatsScreen(stats: FeedTotalStats, user: User, trains: List<Training>?
                     }
                 }
                 val prog = (doneSets.toDouble()/(doneSets+leftSets).toDouble()*100)
-                Log.i("Progress", prog.toString())
+                Log.i("Progress", "${prog} (${doneSets+leftSets})")
                 TrainingProgressGrid(progress = prog.toInt())
                 Button(
                     onClick = { navController.navigate("trainings/${trains.last().id}") },
