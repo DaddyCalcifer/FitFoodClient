@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Female
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Male
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
@@ -52,7 +53,9 @@ import com.fitfood.clientapp.ParametersScreen
 import com.fitfood.clientapp.PlansScreen
 import com.fitfood.clientapp.ProfileForm
 import com.fitfood.clientapp.SportSummaryScreen
+import com.fitfood.clientapp.StatsImgText
 import com.fitfood.clientapp.TrainingPlanSummaryScreen
+import com.fitfood.clientapp.TrainingSummaryScreen
 import com.fitfood.clientapp.models.ActivityType
 import com.fitfood.clientapp.models.FeedAct
 import com.fitfood.clientapp.models.FeedStats
@@ -61,6 +64,7 @@ import com.fitfood.clientapp.models.FitData
 import com.fitfood.clientapp.models.FitPlan
 import com.fitfood.clientapp.models.FoodRequest
 import com.fitfood.clientapp.models.Gender
+import com.fitfood.clientapp.models.Sport.Training
 import com.fitfood.clientapp.models.Sport.TrainingPlan
 import com.fitfood.clientapp.models.User
 import com.fitfood.clientapp.services.DataService
@@ -136,7 +140,46 @@ fun MainScreen(navController_: NavController?, context: Context?) {
                     } else if (plan != null) {
                         TrainingPlanSummaryScreen(plan!!)
                     } else {
-                        Text("План тренировки не найден")
+                        StatsImgText(Icons.Default.SearchOff,"План тренировки не найден")
+                    }
+                }
+                composable("training/{id}",
+                    arguments = listOf(navArgument("id")
+                    { type = NavType.StringType }
+                    )) { backStackEntry ->
+                    val trainId = backStackEntry.arguments?.getString("id") ?: "Unknown"
+                    val sharedPreferences: SharedPreferences =
+                        LocalContext.current.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                    val token = sharedPreferences.getString("jwt", "").orEmpty()
+
+                    var train by remember { mutableStateOf<Training?>(null) }
+                    var isLoading by remember { mutableStateOf(true) }
+                    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+                    LaunchedEffect(trainId) {
+                        try {
+                            train = dataService.fetchTrainingById(trainId, token)
+                            errorMessage = null
+                        } catch (e: Exception) {
+                            errorMessage = "Ошибка загрузки тренировки: ${e.message}"
+                            train = null
+                        } finally {
+                            isLoading = false
+                        }
+                    }
+
+                    if (isLoading) {
+                        LoadingScreen()
+                    } else if (errorMessage != null) {
+                        Text(
+                            text = errorMessage!!,
+                            color = Color.Red,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    } else if (train != null) {
+                        TrainingSummaryScreen(train!!, token)
+                    } else {
+                        StatsImgText(Icons.Default.SearchOff,"Тренировка не найдена!")
                     }
                 }
                 composable("Nutrition/Detail") {

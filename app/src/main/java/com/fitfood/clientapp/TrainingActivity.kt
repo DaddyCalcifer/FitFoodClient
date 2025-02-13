@@ -1,5 +1,6 @@
 package com.fitfood.clientapp
 
+import android.widget.Space
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -20,8 +22,11 @@ import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -41,41 +46,63 @@ import androidx.compose.ui.unit.dp
 import com.fitfood.clientapp.models.Sport.Exercise
 import com.fitfood.clientapp.models.Sport.ExerciseProgress
 import com.fitfood.clientapp.models.Sport.Set
+import com.fitfood.clientapp.models.Sport.Training
+import com.fitfood.clientapp.models.Sport.TrainingPlan
 import com.fitfood.clientapp.ui.theme.ClientAppTheme
 
 @Composable
-fun ExercisesProgressList(exercises: List<ExerciseProgress>)
-{
-    var openedExercises = remember { mutableStateOf(false) }
-    Column()
-    {
-        Row(modifier = Modifier.clickable{
-            openedExercises.value = !openedExercises.value
-        }) {
-            if(openedExercises.value){
-                Icon(imageVector = Icons.Default.KeyboardArrowUp,
+fun TrainingSummaryScreen(train: Training, token: String) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp, 8.dp, 16.dp, 0.dp)
+    ) {
+        item {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clickable { }
+            ) {
+                Text(
+                    text = "${train.trainingPlan.name} ",
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.padding(vertical = 5.dp)
+                )
+                Icon(
+                    imageVector = Icons.Default.LocalFireDepartment,
                     contentDescription = null,
-                    Modifier.size(32.dp))
+                    Modifier.size(30.dp)
+                )
             }
-            else {
-                Icon(imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = null,
-                    Modifier.size(32.dp))
-            }
-            Text("Список упражнений", style = MaterialTheme.typography.titleLarge)
         }
-        Spacer(Modifier.height(10.dp))
-        if(openedExercises.value) {
-            for(e in exercises) {
-                ExerciseProgressCard(e)
-                Spacer(Modifier.height(16.dp))
-            }
+        item {
+            Spacer(Modifier.height(16.dp))
+            Text(train.trainingPlan.description,
+                style = MaterialTheme.typography.titleLarge)
+        }
+        item {
+            Spacer(modifier = Modifier.height(16.dp))
+            ExercisesProgressList(train.exercises, token)
         }
     }
 }
 
 @Composable
-fun ExerciseProgressCard(exProgress : ExerciseProgress)
+fun ExercisesProgressList(exercises: List<ExerciseProgress>, token: String)
+{
+    Column()
+    {
+        Text("Список упражнений", style = MaterialTheme.typography.titleLarge)
+        Spacer(Modifier.height(10.dp))
+        for (e in exercises) {
+            ExerciseProgressCard(e, token)
+            Spacer(Modifier.height(16.dp))
+
+        }
+    }
+}
+
+@Composable
+fun ExerciseProgressCard(exProgress : ExerciseProgress, token: String)
 {
     Box(modifier = Modifier
         .fillMaxWidth()
@@ -106,7 +133,8 @@ fun ExerciseProgressCard(exProgress : ExerciseProgress)
                     Text("Подходы: ", style = MaterialTheme.typography.bodyLarge)
                     for(set in exProgress.sets)
                     {
-
+                        SetCard(set, token, exProgress.exercise.repsIsSeconds)
+                        Spacer(Modifier.height(12.dp))
                     }
                 }
             }
@@ -114,63 +142,165 @@ fun ExerciseProgressCard(exProgress : ExerciseProgress)
     }
 }
 @Composable
-fun SetCard(set: Set)
+fun SetCard(set: Set, token: String="", repIsSecs: Boolean=false)
 {
-    var setStarted = remember { mutableStateOf(true) }
+    var setStarted = remember { mutableStateOf(false) }
+    var fullSized = remember { mutableStateOf(false) }
+    var isCompleted = remember { mutableStateOf(false) }
     var reps = remember { mutableStateOf(set.reps.toString()) }
     var weight = remember { mutableStateOf(set.weight.toString()) }
 
+    var headerColor = if(set.isCompleted || fullSized.value) Color(0xFF1A300c) else Color.DarkGray
+
     Column(modifier = Modifier.fillMaxWidth()
-        .background(color = Color.Gray, RoundedCornerShape(20.dp))) {
+        .background(color = Color(0x564B4B4B), RoundedCornerShape(20.dp))) {
         Column(modifier = Modifier.fillMaxWidth()
-            .background(Color(0xFF1A300c),
+            .background(headerColor,
             RoundedCornerShape(20.dp)),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(Modifier.height(5.dp))
-            Text(
-                "Подход ${set.setNumber}",
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.White
-            )
-            Spacer(Modifier.height(5.dp))
-        }
-        Box(modifier = Modifier.fillMaxWidth()) {
-            if(!setStarted.value) {
-                Column(modifier = Modifier.padding(10.dp))
-                {
+                Spacer(Modifier.height(5.dp))
+                Row(Modifier.fillMaxWidth()
+                    .clickable{
+                        fullSized.value = !fullSized.value
+                    },
+                    horizontalArrangement = Arrangement.SpaceBetween) {
+                    Row {
+                        Spacer(Modifier.width(10.dp))
+                        Box(
+                            Modifier.size(26.dp)
+                                .background(color = Color.White, RoundedCornerShape(13.dp)),
+                        )
+                        {
+                            if (set.isCompleted)
+                                Row(Modifier.padding(4.dp)) {
+                                    Box(
+                                        Modifier.size(18.dp)
+                                            .background(
+                                                color = Color(0xFF1A300c),
+                                                RoundedCornerShape(9.dp)
+                                            )
+                                    )
+                                }
+                        }
+                    }
                     Text(
-                        "Как только будете готовы, начинайте подход.",
-                        style = MaterialTheme.typography.titleLarge
+                        "Подход ${set.setNumber}",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White
                     )
-                    Spacer(Modifier.height(40.dp))
-                    Button(
-                        onClick = { setStarted.value = true },
-                        modifier = Modifier
-                            .fillMaxWidth(1f)
-                            .height(50.dp),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
-                    ) {
-                        Text("Начать подход", style = MaterialTheme.typography.titleMedium)
+                    Row() {
+                        val iconArrow = if(fullSized.value)
+                            Icons.Default.KeyboardArrowUp
+                        else
+                            Icons.Default.KeyboardArrowDown
+                        Icon(imageVector = iconArrow,
+                            contentDescription = null,
+                            Modifier.size(26.dp),
+                            tint = Color.White)
+                        Spacer(Modifier.width(10.dp))
                     }
                 }
-            } else {
-                Column(modifier = Modifier.padding(10.dp))
-                {
-                    ValuePicker(reps, "Повторения")
-                    Spacer(Modifier.height(16.dp))
-                    ValuePicker(weight, "Вес")
-                    Spacer(Modifier.height(16.dp))
-                    Button(
-                        onClick = {  },
-                        modifier = Modifier
-                            .fillMaxWidth(1f)
-                            .height(50.dp),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
-                    ) {
-                        Text("Завершить подход", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(5.dp))
+        }
+        if(fullSized.value) {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                if (!setStarted.value && !set.isCompleted) {
+                    Column(modifier = Modifier.padding(10.dp))
+                    {
+                        Text(
+                            "Как только будете готовы, начинайте подход.",
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Spacer(Modifier.height(73.dp))
+                        Button(
+                            onClick = { setStarted.value = true },
+                            modifier = Modifier
+                                .fillMaxWidth(1f)
+                                .height(50.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = ButtonDefaults.buttonColors(Color(0xFF1A300c)),
+                        ) {
+                            Text("Начать подход", style = MaterialTheme.typography.titleMedium)
+                        }
+                    }
+                } else {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        val isLoading = remember { mutableStateOf(false) }
+                        val showErrorDialog = remember { mutableStateOf(false) }
+                        val repsText = if(repIsSecs) "Время (сек.)" else "Повторения"
+                        ValuePicker(reps, repsText, hasButtons = !set.isCompleted)
+                        Spacer(Modifier.height(16.dp))
+                        ValuePicker(weight, "Вес (кг.)", hasButtons = !set.isCompleted)
+                        Spacer(Modifier.height(16.dp))
+
+                        if (showErrorDialog.value) {
+                            AlertDialog(
+                                onDismissRequest = {
+                                    showErrorDialog.value = false // Закрываем диалог
+                                },
+                                title = {
+                                    Text("Ошибка")
+                                },
+                                text = {
+                                    Text("Не удалось завершить подход. Пожалуйста, попробуйте снова.")
+                                },
+                                confirmButton = {
+                                    Button(
+                                        onClick = {
+                                            showErrorDialog.value = false // Закрываем диалог
+                                        },
+                                        colors = ButtonDefaults.buttonColors(Color(0xFF5E953B))
+                                    ) {
+                                        Text("OK", color = Color.White)
+                                    }
+                                }
+                            )
+                        }
+
+                        if (!isCompleted.value && !set.isCompleted) {
+                            Button(
+                                onClick = {
+                                    // Запускаем загрузку
+                                    isLoading.value = true
+
+                                    // Вызываем метод завершения подхода
+                                    dataService.completeSet(set.id,
+                                        reps.value.toInt(),
+                                        weight.value.toDouble(),
+                                        token)
+                                    {
+                                        isSuccessful ->
+                                        isLoading.value = false // Завершаем загрузку
+
+                                        if (isSuccessful) {
+                                            isCompleted.value = true
+                                            set.isCompleted = true
+                                            fullSized.value = true
+                                        } else {
+                                            // Ошибка: показываем всплывающее окно
+                                            showErrorDialog.value = true
+                                        }
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth(1f)
+                                    .height(50.dp),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = ButtonDefaults.buttonColors(Color(0xFF1A300c)),
+                                enabled = !isLoading.value // Кнопка неактивна во время загрузки
+                            ) {
+                                if (isLoading.value) {
+                                    // Показываем индикатор загрузки
+                                    CircularProgressIndicator(
+                                        color = Color.White,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                } else {
+                                    Text("Завершить подход", style = MaterialTheme.typography.titleMedium)
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -178,7 +308,7 @@ fun SetCard(set: Set)
     }
 }
 @Composable
-fun ValuePicker(value: MutableState<String>, label: String="")
+fun ValuePicker(value: MutableState<String>, label: String="", hasButtons: Boolean = true)
 {
     Row(verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -191,8 +321,16 @@ fun ValuePicker(value: MutableState<String>, label: String="")
             }
         }
         Row {
+            if(hasButtons)
             Button(
-                onClick = { value.value = (value.value.toInt() - 1).toString() },
+                onClick = {
+                    if(value.value.toDouble() > 0){
+                    value.value =
+                        if(!value.value.contains("."))
+                            (value.value.toInt() - 1).toString()
+                        else
+                            (value.value.toDouble() - 0.5).toString()
+                }},
                 modifier = Modifier
                     .width(50.dp)
                     .height(50.dp),
@@ -203,7 +341,10 @@ fun ValuePicker(value: MutableState<String>, label: String="")
             }
             TextField(
                 value = value.value,
-                onValueChange = { value.value = it },
+                onValueChange = {
+                    if(it.toInt() in 1..600)
+                    value.value = it
+                                },
                 modifier = Modifier
                     .width(80.dp)
                     .padding(horizontal = 8.dp)
@@ -213,10 +354,18 @@ fun ValuePicker(value: MutableState<String>, label: String="")
                 colors = TextFieldDefaults.colors(
                     unfocusedIndicatorColor = Color.Transparent,
                     focusedIndicatorColor = Color.Transparent
-                )
+                ),
+                readOnly = true
             )
+            if(hasButtons)
             Button(
-                onClick = { value.value = (value.value.toInt() + 1).toString() },
+                onClick = {
+                    if(value.value.toDouble() < 600.0){
+                    value.value =
+                    if(!value.value.contains("."))
+                        (value.value.toInt() + 1).toString()
+                    else
+                        (value.value.toDouble() + 0.5).toString() }},
                 modifier = Modifier
                     .width(50.dp)
                     .height(50.dp),
@@ -233,6 +382,13 @@ fun ValuePicker(value: MutableState<String>, label: String="")
 @Composable
 fun CardPreview() {
     ClientAppTheme {
-        //SetCard()
+        SetCard(Set(
+            id = "id",
+            setNumber = 1,
+            reps = 10,
+            weight = 10.0,
+            exerciseProgressId = "ddsdds",
+            exerciseProgress = null,
+            isCompleted = false), "")
     }
 }

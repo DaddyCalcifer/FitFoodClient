@@ -223,7 +223,10 @@ fun HealthStatsScreen(stats: FeedTotalStats, user: User, trains: List<Training>?
                 Log.i("Progress", "${prog} (${doneSets+leftSets})")
                 TrainingProgressGrid(progress = prog.toInt())
                 Button(
-                    onClick = { navController.navigate("trainings/${trains.last().id}") },
+                    onClick = {
+                        Log.i("TrainingID", "Navigating to training with ID: ${trains.last().id}")
+                        navController.navigate("training/${trains.last().id}")
+                              },
                     modifier = Modifier
                         .fillMaxWidth(0.82f)
                         .height(40.dp),

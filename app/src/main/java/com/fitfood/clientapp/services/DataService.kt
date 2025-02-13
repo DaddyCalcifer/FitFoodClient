@@ -46,6 +46,32 @@ class DataService {
             }
         })
     }
+
+    fun completeSet(setId: String, reps: Int, weight: Double, token: String, onResponse: (Boolean) -> Unit) {
+        // Формируем URL для запроса
+        val url = "${BASE_URL}sport/set/$setId/$reps:$weight"
+
+        // Создаем запрос
+        val request = Request.Builder()
+            .url(url)
+            .put(RequestBody.create(null, "")) // Пустое тело запроса, так как данные передаются в URL
+            .addHeader("Authorization", "Bearer $token")
+            .build()
+
+        // Отправляем запрос асинхронно
+        OkHttpClient().newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                // В случае ошибки сети возвращаем false
+                onResponse(false)
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                // Возвращаем true, если код ответа 200
+                onResponse(response.isSuccessful)
+            }
+        })
+    }
+
     fun sendFoodData(foodData: FoodRequest, token: String, type: String) {
         val url = "${BASE_URL}food/add/${type}"
         val requestBody = Gson().toJson(foodData)
