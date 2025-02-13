@@ -131,6 +131,7 @@ fun ExerciseProgressCard(exProgress : ExerciseProgress, token: String)
                 Spacer(modifier = Modifier.height(8.dp))
                 Column{
                     Text("Подходы: ", style = MaterialTheme.typography.bodyLarge)
+                    Spacer(Modifier.height(12.dp))
                     for(set in exProgress.sets)
                     {
                         SetCard(set, token, exProgress.exercise.repsIsSeconds)
@@ -150,7 +151,7 @@ fun SetCard(set: Set, token: String="", repIsSecs: Boolean=false)
     var reps = remember { mutableStateOf(set.reps.toString()) }
     var weight = remember { mutableStateOf(set.weight.toString()) }
 
-    var headerColor = if(set.isCompleted || fullSized.value) Color(0xFF1A300c) else Color.DarkGray
+    var headerColor = if(set.isCompleted || fullSized.value) Color(0xFF3C5015) else Color(0xFFB1B2B2)
 
     Column(modifier = Modifier.fillMaxWidth()
         .background(color = Color(0x564B4B4B), RoundedCornerShape(20.dp))) {
@@ -177,7 +178,7 @@ fun SetCard(set: Set, token: String="", repIsSecs: Boolean=false)
                                     Box(
                                         Modifier.size(18.dp)
                                             .background(
-                                                color = Color(0xFF1A300c),
+                                                color = Color(0xFF3C5015),
                                                 RoundedCornerShape(9.dp)
                                             )
                                     )
@@ -219,7 +220,7 @@ fun SetCard(set: Set, token: String="", repIsSecs: Boolean=false)
                                 .fillMaxWidth(1f)
                                 .height(50.dp),
                             shape = RoundedCornerShape(20.dp),
-                            colors = ButtonDefaults.buttonColors(Color(0xFF1A300c)),
+                            colors = ButtonDefaults.buttonColors(Color(0xFF3C5015)),
                         ) {
                             Text("Начать подход", style = MaterialTheme.typography.titleMedium)
                         }
@@ -287,7 +288,7 @@ fun SetCard(set: Set, token: String="", repIsSecs: Boolean=false)
                                     .fillMaxWidth(1f)
                                     .height(50.dp),
                                 shape = RoundedCornerShape(20.dp),
-                                colors = ButtonDefaults.buttonColors(Color(0xFF1A300c)),
+                                colors = ButtonDefaults.buttonColors(Color(0xFF3C5015)),
                                 enabled = !isLoading.value // Кнопка неактивна во время загрузки
                             ) {
                                 if (isLoading.value) {
@@ -316,7 +317,7 @@ fun ValuePicker(value: MutableState<String>, label: String="", hasButtons: Boole
         if(label.isNotEmpty())
         {
             Row {
-                Text(label, style = MaterialTheme.typography.titleLarge)
+                Text(label, style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.width(10.dp))
             }
         }
