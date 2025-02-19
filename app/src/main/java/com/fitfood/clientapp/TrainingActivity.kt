@@ -322,23 +322,25 @@ fun ValuePicker(value: MutableState<String>, label: String="", hasButtons: Boole
             }
         }
         Row {
-            if(hasButtons)
-            Button(
-                onClick = {
-                    if(value.value.toDouble() > 0){
-                    value.value =
-                        if(!value.value.contains("."))
-                            (value.value.toInt() - 1).toString()
-                        else
-                            (value.value.toDouble() - 0.5).toString()
-                }},
-                modifier = Modifier
-                    .width(50.dp)
-                    .height(50.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
-            ) {
-                Text("-", style = MaterialTheme.typography.titleLarge)
+            if(hasButtons) {
+                Button(
+                    onClick = {
+                        if (value.value.toDouble() > 0) {
+                            value.value =
+                                if (!value.value.contains("."))
+                                    (value.value.toInt() - 1).toString()
+                                else
+                                    (value.value.toDouble() - 0.5).toString()
+                        }
+                    },
+                    modifier = Modifier
+                        .width(50.dp)
+                        .height(50.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
+                ) {
+                    Text("-", style = MaterialTheme.typography.titleLarge)
+                }
             }
             TextField(
                 value = value.value,

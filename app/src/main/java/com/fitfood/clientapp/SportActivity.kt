@@ -17,12 +17,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.fitfood.clientapp.models.FeedTotalStats
+import com.fitfood.clientapp.models.Sport.Set
 import com.fitfood.clientapp.models.Sport.Training
 import com.fitfood.clientapp.models.Sport.TrainingPlan
 import com.fitfood.clientapp.models.User
+import com.fitfood.clientapp.ui.theme.ClientAppTheme
 import kotlinx.coroutines.launch
 
 @Composable
@@ -157,11 +160,18 @@ fun HealthStatsScreen(stats: FeedTotalStats, user: User, trains: List<Training>?
                 } else {
                     StatsImgText(Icons.Default.Warning, "Перебор: ${needAte * -1} ккал")
                 }
-                Spacer(modifier = Modifier.height(20.dp))
-                StatsImgText(
-                    Icons.Default.Cable,
-                    "Пройдено:\n10000\t\t\uD83D\uDC63\n10 км\t\t\uD83C\uDFC1"
-                )
+                Spacer(modifier = Modifier.height(25.dp))
+                Box(Modifier.background(color = Color(0xFFE5E7E7), RoundedCornerShape(20.dp))
+                    .padding(10.dp)
+                    .fillMaxWidth(0.95f)
+                    .clickable{
+                        navController.navigate("trainings")
+                    }) {
+                    StatsImgText(
+                        Icons.Default.AutoStories,
+                        "История занятий"
+                    )
+                }
             }
         } else {
             Column(
@@ -386,5 +396,190 @@ fun PlanCard(navController: NavController, plan: TrainingPlan) {
                 Text(plan.description, style = MaterialTheme.typography.bodyLarge)
             }
         }
+    }
+}
+
+@Composable
+fun TrainingInListCard(training: Training, navController: NavController)
+{
+    Column(modifier = Modifier.fillMaxWidth()
+        .background(color = Color(0x564B4B4B), RoundedCornerShape(20.dp))
+        .clickable{navController.navigate("training/${training.id}")}) {
+        Column(
+            modifier = Modifier.fillMaxWidth()
+                .background(
+                    Color(0xFF3C5015),
+                    RoundedCornerShape(20.dp)
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Spacer(Modifier.height(5.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "   ${training.trainingPlan.name}",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White
+                )
+                Text(
+                    "${training.date}   ",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White
+                )
+            }
+            Spacer(Modifier.height(5.dp))
+        }
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(10.dp,0.dp,10.dp,10.dp)) {
+                val isLoading = remember { mutableStateOf(false) }
+                val showErrorDialog = remember { mutableStateOf(false) }
+                Spacer(Modifier.height(16.dp))
+
+                if (showErrorDialog.value) {
+                    AlertDialog(
+                        onDismissRequest = {
+                            showErrorDialog.value = false // Закрываем диалог
+                        },
+                        title = {
+                            Text("Ошибка")
+                        },
+                        text = {
+                            Text("Возникла ошибка при загрузке")
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    showErrorDialog.value = false // Закрываем диалог
+                                },
+                                colors = ButtonDefaults.buttonColors(Color(0xFF5E953B))
+                            ) {
+                                Text("OK", color = Color.White)
+                            }
+                        }
+                    )
+
+                }
+                if(isLoading.value)
+                {
+                    Box(modifier = Modifier.fillMaxWidth().height(70.dp)) {
+                        LoadingScreen()
+                    }
+                }
+                else{
+                    Row {
+                        Column(modifier = Modifier
+                            .fillMaxWidth(0.55f)
+                            .height(100.dp),
+                            verticalArrangement = Arrangement.SpaceBetween) {
+                            Text(
+                                training.trainingPlan.description,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color(0xFF3C5015)
+                            )
+                        }
+                        var doneSets = 0
+                        var leftSets = 0
+                        for(ex in training.exercises)
+                        {
+                            for(set in ex.sets)
+                            {
+                                if(set.isCompleted)
+                                    doneSets++
+                                else
+                                    leftSets++
+                            }
+                        }
+                        val prog = (doneSets.toDouble()/(doneSets+leftSets).toDouble()*100)
+                        TrainingProgressGrid(prog.toInt())
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TrainingsHistory(navController: NavController) {
+    var isLoading by remember { mutableStateOf(true) }
+    val coroutineScope = rememberCoroutineScope()
+    var trainings by remember { mutableStateOf<List<Training>?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
+    val sharedPreferences: SharedPreferences =
+        context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+    val token = sharedPreferences.getString("jwt", "").orEmpty()
+
+    // Функция для загрузки планов
+    fun refreshTrains() {
+        coroutineScope.launch {
+            try {
+                trainings = dataService.fetchTrainings(token)
+                errorMessage = null
+            } catch (e: Exception) {
+                errorMessage = "Ошибка загрузки данных: ${e.message}"
+                Log.e("SportSummaryScreen", "Ошибка при загрузке данных", e)
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        refreshTrains()
+    }
+
+    // Отображение UI в зависимости от состояния
+    if (isLoading) {
+        LoadingScreen() // Показываем индикатор загрузки
+    } else if (errorMessage != null) {
+        Text(
+            text = errorMessage!!,
+            color = Color.Red,
+            modifier = Modifier.padding(16.dp)
+        )
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp, 8.dp, 16.dp, 0.dp)
+        ) {
+            item {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Мои тренировки ",
+                        style = MaterialTheme.typography.headlineMedium,
+                        modifier = Modifier.padding(vertical = 5.dp)
+                    )
+                    Icon(
+                        imageVector = Icons.Default.AutoStories,
+                        contentDescription = null,
+                        Modifier.size(30.dp)
+                    )
+                }
+            }
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+                trainings?.let { trainings ->
+                    for(tra in trainings)
+                    {
+                        TrainingInListCard(tra, navController)
+                    }
+                } ?: run {
+                    StatsImgText(Icons.Default.SearchOff,"История пуста")
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ListingPreview() {
+    ClientAppTheme {
     }
 }

@@ -56,6 +56,7 @@ import com.fitfood.clientapp.SportSummaryScreen
 import com.fitfood.clientapp.StatsImgText
 import com.fitfood.clientapp.TrainingPlanSummaryScreen
 import com.fitfood.clientapp.TrainingSummaryScreen
+import com.fitfood.clientapp.TrainingsHistory
 import com.fitfood.clientapp.models.ActivityType
 import com.fitfood.clientapp.models.FeedAct
 import com.fitfood.clientapp.models.FeedStats
@@ -103,6 +104,9 @@ fun MainScreen(navController_: NavController?, context: Context?) {
                 }
                 composable("Nutrition") {
                     NutritionScreen(navController, context)
+                }
+                composable("trainings") {
+                    TrainingsHistory(navController)
                 }
                 composable("trainingPlan/{id}",
                     arguments = listOf(navArgument("id")
