@@ -1,5 +1,9 @@
 package com.fitfood.clientapp
 
+import android.content.Context
+import android.content.SharedPreferences
+import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,17 +30,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import com.fitfood.clientapp.ui.theme.ClientAppTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.NavController
 import com.fitfood.clientapp.models.Sport.Exercise
 import com.fitfood.clientapp.models.Sport.TrainingPlan
+import kotlinx.coroutines.launch
+import java.util.UUID
 
 @Composable
-fun TrainingPlanSummaryScreen(plan: TrainingPlan) {
+fun TrainingPlanSummaryScreen(plan: TrainingPlan, navController: NavController) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -66,12 +75,12 @@ fun TrainingPlanSummaryScreen(plan: TrainingPlan) {
         }
         item {
             Spacer(modifier = Modifier.height(16.dp))
-            ExercisesList(plan.exercises)
+            ExercisesList(plan.exercises, plan.id, navController)
         }
     }
 }
 @Composable
-fun ExercisesList(exercises: List<Exercise>)
+fun ExercisesList(exercises: List<Exercise>, trainPlanId: String?, navController: NavController)
 {
     var openedExercises = remember { mutableStateOf(false) }
     Column()
@@ -99,8 +108,28 @@ fun ExercisesList(exercises: List<Exercise>)
             }
         }
         Spacer(Modifier.height(16.dp))
+
+        val coroutineScope = rememberCoroutineScope()
+        val context = LocalContext.current
+        val sharedPreferences: SharedPreferences =
+            context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        val token = sharedPreferences.getString("jwt", "").toString()
+
         Button(
-            onClick = { },
+            onClick = {
+                coroutineScope.launch {
+                    val training = dataService.sendCreateTraining(trainPlanId, token)
+                    training?.let {
+                        // Обработка объекта Training
+                        Log.d("Training", "Тренировка началась: ${it.id}")
+
+                        // Пример действия: переход на экран тренировки или обновление UI
+                        navController.navigate("training/${it.id}")
+                    } ?: run {
+                        Toast.makeText(context, "Ошибка при создании тренировки", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth(1f)
                 .height(70.dp),

@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -34,6 +35,9 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -322,7 +326,15 @@ fun RegisterForm(navController: NavController?, context: Context?) {
         Text("Повторите пароль", style = MaterialTheme.typography.titleMedium)
         FitPasswordBox(confirmPassword)
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(10.dp))
+        TermsAndConditionsCheckbox(
+            checked = true,
+            onCheckedChange = {  },
+            onTermsClicked = {
+                Log.d("Registration", "Terms clicked")
+            }
+        )
+        Spacer(modifier = Modifier.height(10.dp))
 
         Column(
             Modifier.fillMaxSize(),
@@ -372,6 +384,40 @@ fun RegisterForm(navController: NavController?, context: Context?) {
                 }
             )
         }
+    }
+}
+@Composable
+fun TermsAndConditionsCheckbox(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    onTermsClicked: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 8.dp)
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = CheckboxDefaults.colors(
+                checkedColor = Color(0xFF5E953B) // Зеленый цвет как в вашем дизайне
+            )
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // Текст с кликабельной частью
+        Text(
+            text = buildAnnotatedString {
+                append("Создавая аккаунт, вы принимаете ")
+
+                // Зеленая кликабельная часть
+                withStyle(style = SpanStyle(color = Color(0xFF5E953B))) {
+                    append("Пользовательское соглашение")
+                }
+            },
+            modifier = Modifier.clickable(onClick = onTermsClicked)
+        )
     }
 }
 @Composable

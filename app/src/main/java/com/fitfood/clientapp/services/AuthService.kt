@@ -11,7 +11,7 @@ import java.io.IOException
 class AuthService {
 
     // Базовый URL API
-    private val BASE_URL = "https://fitfoodapi-6x5r.onrender.com/api/user/"
+    private val BASE_URL = "http://10.0.2.2:5059/api/user/"
 
     // Клиент OkHttp и объект Gson для сериализации
     private val client = OkHttpClient()

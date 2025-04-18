@@ -25,7 +25,7 @@ import java.io.IOException
 import java.util.UUID
 
 class DataService {
-    private val BASE_URL = "https://fitfoodapi-6x5r.onrender.com/api/"
+    private val BASE_URL = "http://10.0.2.2:5059/api/"
 
     fun sendFitData(fitData: FitData, token: String, onResponse: (Boolean) -> Unit) {
         val url = "${BASE_URL}user/data"
@@ -343,4 +343,31 @@ class DataService {
             }
         })
     }
+    suspend fun sendCreateTraining(
+        trainPlanId: String?,
+        token: String
+    ): Training? = withContext(Dispatchers.IO) {
+        val url = "${BASE_URL}sport/trainings/create:${trainPlanId}"
+
+        val json = Gson().toJson(mapOf("planId" to trainPlanId.toString()))
+        val body = json.toRequestBody("application/json; charset=utf-8".toMediaType())
+
+        val request = Request.Builder()
+            .url(url)
+            .post(body)
+            .addHeader("Authorization", "Bearer $token")
+            .addHeader("Content-Type", "application/json")
+            .build()
+
+        val response = OkHttpClient().newCall(request).execute()
+        return@withContext if (response.isSuccessful) {
+            response.body?.string()?.let {
+                Gson().fromJson(it, Training::class.java)
+            }
+        } else {
+            Log.e("AddTraining", "Failed with code: ${response.code}")
+            null
+        }
+    }
+
 }

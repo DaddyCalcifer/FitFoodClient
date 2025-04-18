@@ -410,21 +410,16 @@ fun TrainingInListCard(training: Training, navController: NavController)
                 .background(
                     Color(0xFF3C5015),
                     RoundedCornerShape(20.dp)
-                ),
+                ).height(60.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(Modifier.height(5.dp))
             Row(
-                Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth(0.9f),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    "   ${training.trainingPlan.name}",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White
-                )
-                Text(
-                    "${training.date}   ",
+                    "   ${training.trainingPlan.name} [${training.date}]",
                     style = MaterialTheme.typography.titleMedium,
                     color = Color.White
                 )

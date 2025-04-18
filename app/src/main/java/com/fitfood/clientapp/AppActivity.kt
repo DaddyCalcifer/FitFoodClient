@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,6 +33,8 @@ import androidx.compose.material.icons.filled.Construction
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Female
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.LockReset
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Male
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.SearchOff
@@ -142,7 +145,7 @@ fun MainScreen(navController_: NavController?, context: Context?) {
                             modifier = Modifier.padding(16.dp)
                         )
                     } else if (plan != null) {
-                        TrainingPlanSummaryScreen(plan!!)
+                        TrainingPlanSummaryScreen(plan!!, navController)
                     } else {
                         StatsImgText(Icons.Default.SearchOff,"План тренировки не найден")
                     }
@@ -304,7 +307,50 @@ fun ProfileScreen(navController: NavController?, context: Context?) {
                 }
             })
     }?: run {
-        LoadingScreen()
+        Column {
+            Box(Modifier.fillMaxHeight(0.85f)) {
+                LoadingScreen()
+            }
+            Button(
+                onClick = {
+                    if (context != null && navController != null) {
+                        val sharedPreferences: SharedPreferences =
+                            context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                        sharedPreferences.edit().putString("jwt", "").apply()
+                        (context as? ComponentActivity)?.runOnUiThread {
+                            navController.navigate("auth") {
+                                popUpTo("main") { inclusive = true }
+                            }
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth(0.8f)
+                    .height(60.dp)
+                    .padding(top = 8.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = ButtonDefaults.buttonColors(Color(0xFFDFE0EA))
+            ) {
+                Row(modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically)
+                {
+                    Icon(
+                        imageVector = Icons.Filled.Logout,
+                        contentDescription = null,
+                        modifier = Modifier.size(35.dp),
+                        tint = Color.DarkGray
+                    )
+                    Text("Выйти из аккаунта", style = MaterialTheme.typography.titleMedium, color = Color.DarkGray)
+                    Icon(
+                        imageVector = Icons.Filled.LockReset,
+                        contentDescription = null,
+                        modifier = Modifier.size(35.dp),
+                        tint = Color.Transparent
+                    )
+                }
+            }
+        }
     }
 }
 
