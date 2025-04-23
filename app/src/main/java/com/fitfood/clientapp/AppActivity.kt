@@ -160,12 +160,14 @@ fun MainScreen(navController_: NavController?, context: Context?) {
                     val token = sharedPreferences.getString("jwt", "").orEmpty()
 
                     var train by remember { mutableStateOf<Training?>(null) }
+                    var trainPlan by remember { mutableStateOf<TrainingPlan?>(null) }
                     var isLoading by remember { mutableStateOf(true) }
                     var errorMessage by remember { mutableStateOf<String?>(null) }
 
                     LaunchedEffect(trainId) {
                         try {
                             train = dataService.fetchTrainingById(trainId, token)
+                            trainPlan = train?.let { dataService.fetchTrainingPlanById(it.trainingPlanId, token) }
                             errorMessage = null
                         } catch (e: Exception) {
                             errorMessage = "Ошибка загрузки тренировки: ${e.message}"
@@ -184,7 +186,7 @@ fun MainScreen(navController_: NavController?, context: Context?) {
                             modifier = Modifier.padding(16.dp)
                         )
                     } else if (train != null) {
-                        TrainingSummaryScreen(train!!, token)
+                        trainPlan?.caloriesLoss?.let { TrainingSummaryScreen(train!!, it.toInt() , token) }
                     } else {
                         StatsImgText(Icons.Default.SearchOff,"Тренировка не найдена!")
                     }

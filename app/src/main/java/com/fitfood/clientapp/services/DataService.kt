@@ -25,6 +25,8 @@ import java.io.IOException
 import java.util.UUID
 
 class DataService {
+    //https://fitfoodapi-6x5r.onrender.com/api/
+    //http://10.0.2.2:5059/api/
     private val BASE_URL = "http://10.0.2.2:5059/api/"
 
     fun sendFitData(fitData: FitData, token: String, onResponse: (Boolean) -> Unit) {
@@ -234,6 +236,25 @@ class DataService {
             }
         }
     }
+    suspend fun fetchTrainingPlanByKcal(kcal: Int, token: String): String? {
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .url(BASE_URL + "sport/plans/kcal:$kcal")
+            .addHeader("Authorization", "Bearer $token")
+            .build()
+
+        return withContext(Dispatchers.IO) {
+            val response: Response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val responseBody = response.body?.string()
+                responseBody?.let {
+                    Gson().fromJson(it, String::class.java)
+                }
+            } else {
+                null
+            }
+        }
+    }
 
     //Тренировки
     suspend fun fetchTrainings(token: String): List<Training>? {
@@ -276,6 +297,24 @@ class DataService {
         }
     }
     //
+    suspend fun fetchTrainingProgress(token: String): Int? {
+        val client = OkHttpClient()
+        val request = Request.Builder()
+            .url("${BASE_URL}sport/plans/daily")
+            .addHeader("Authorization", "Bearer $token")
+            .build()
+
+        return withContext(Dispatchers.IO) {
+            val response = client.newCall(request).execute()
+            if (response.isSuccessful) {
+                val responseBody = response.body?.string()
+                responseBody?.toIntOrNull()
+            } else {
+                null
+            }
+        }
+    }
+
 
     suspend fun fetchTodayFeedsByType(token: String, type: String): List<FeedAct>? {
         val client = OkHttpClient()
@@ -369,5 +408,30 @@ class DataService {
             null
         }
     }
+    suspend fun changePassword(token: String, oldPassword: String, newPassword: String): Boolean {
+        val client = OkHttpClient()
+
+        val json = """
+        {
+            "oldPassword": "$oldPassword",
+            "newPassword": "$newPassword"
+        }
+    """.trimIndent()
+
+        val requestBody = json.toRequestBody("application/json".toMediaType())
+        val request = Request.Builder()
+            .url("${BASE_URL}user/repassword")
+            .patch(requestBody)
+            .addHeader("Authorization", "Bearer $token")
+            .build()
+
+        return withContext(Dispatchers.IO) {
+            val response = client.newCall(request).execute()
+            response.use {
+                it.isSuccessful
+            }
+        }
+    }
+
 
 }

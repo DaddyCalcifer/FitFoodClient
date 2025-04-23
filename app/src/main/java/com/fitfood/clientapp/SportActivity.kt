@@ -37,6 +37,7 @@ fun SportSummaryScreen(navController: NavController) {
     var user by remember { mutableStateOf<User?>(null) }
     var stats by remember { mutableStateOf<FeedTotalStats?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var progress by remember { mutableStateOf<Int?>(null) }
 
     val context = LocalContext.current
     val sharedPreferences: SharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
@@ -49,6 +50,7 @@ fun SportSummaryScreen(navController: NavController) {
                 plans = dataService.fetchTrainingPlans(token)
                 trainings = dataService.fetchTrainings(token)
                 user = dataService.fetchUser(token)
+                progress = dataService.fetchTrainingProgress(token)
                 if (user?.plans?.isNotEmpty() == true) {
                     stats = dataService.fetchTotalStats(token)
                 }
@@ -105,7 +107,15 @@ fun SportSummaryScreen(navController: NavController) {
             item {
                 stats?.let { safeStats ->
                     user?.let { safeUser ->
-                        HealthStatsScreen(safeStats, safeUser, trainings, navController)
+                        progress?.let {
+                            HealthStatsScreen(
+                                safeStats,
+                                safeUser,
+                                trainings,
+                                navController,
+                                progress!!
+                            )
+                        }
                     }
                 } ?: run {
                     HealthStatsPlaceholder(navController)
@@ -137,11 +147,11 @@ fun StatsImgText(icon: ImageVector, text: String) {
 }
 
 @Composable
-fun HealthStatsScreen(stats: FeedTotalStats, user: User, trains: List<Training>?, navController: NavController) {
+fun HealthStatsScreen(stats: FeedTotalStats, user: User, trains: List<Training>?, navController: NavController, progress: Int) {
     val hasTrain = trains?.isNotEmpty() ?: false
 
     val needAte = if (user.plans.isNotEmpty()) {
-        (user.plans.last().dayKcal - stats.ateKcal).toInt()
+        ((user.plans.last().dayKcal + stats.burntKcal) - stats.ateKcal).toInt()
     } else {
         0
     }
@@ -153,13 +163,13 @@ fun HealthStatsScreen(stats: FeedTotalStats, user: User, trains: List<Training>?
                     .fillMaxWidth(0.49f)
                     .fillMaxHeight()
             ) {
-                StatsImgText(Icons.Default.Cake, "Съедено: ${stats.ateKcal.toInt()} ккал")
-                Spacer(modifier = Modifier.height(20.dp))
                 if (needAte > 0) {
-                    StatsImgText(Icons.Default.Dining, "Осталось: $needAte ккал")
+                    StatsImgText(Icons.Default.Cake, "Съедено: ${stats.ateKcal.toInt()} ккал")
                 } else {
                     StatsImgText(Icons.Default.Warning, "Перебор: ${needAte * -1} ккал")
                 }
+                Spacer(modifier = Modifier.height(20.dp))
+                StatsImgText(Icons.Default.LocalFireDepartment, "Сожжено: ${stats.burntKcal.toInt()} ккал")
                 Spacer(modifier = Modifier.height(25.dp))
                 Box(Modifier.background(color = Color(0xFFE5E7E7), RoundedCornerShape(20.dp))
                     .padding(10.dp)
@@ -205,37 +215,31 @@ fun HealthStatsScreen(stats: FeedTotalStats, user: User, trains: List<Training>?
                 .background(Color.DarkGray, RoundedCornerShape(2.dp))
         )
         // Правая колонка с прогрессом тренировки
+        val context = LocalContext.current
+        val sharedPreferences: SharedPreferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        val last = sharedPreferences.getString("training", "").orEmpty()
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .background(Color(0x18315A16), shape = RoundedCornerShape(20.dp))
                 .padding(10.dp)
         ) {
-            if (hasTrain) {
+            if (hasTrain && progress > -1) {
                 Text(
-                    text = "Прогресс\nтренировки:",
+                    text = "Прогресс\nтренировок:",
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(vertical = 5.dp)
                 )
-                var doneSets = 0
-                var leftSets = 0
-                for(ex in trains?.last()?.exercises!!)
-                {
-                    for(set in ex.sets)
-                    {
-                        if(set.isCompleted)
-                            doneSets++
-                        else
-                            leftSets++
-                    }
-                }
-                val prog = (doneSets.toDouble()/(doneSets+leftSets).toDouble()*100)
-                Log.i("Progress", "${prog} (${doneSets+leftSets})")
-                TrainingProgressGrid(progress = prog.toInt())
+                TrainingProgressGrid(progress)
                 Button(
                     onClick = {
-                        Log.i("TrainingID", "Navigating to training with ID: ${trains.last().id}")
-                        navController.navigate("training/${trains.last().id}")
+                        if (trains != null) {
+                            Log.i("TrainingID", "Navigating to training with ID: ${trains.last().id}")
+                        }
+                        if (last != "") {
+                            navController.navigate("training/${last}")
+                        }
                               },
                     modifier = Modifier
                         .fillMaxWidth(0.82f)
@@ -386,6 +390,16 @@ fun PlanCard(navController: NavController, plan: TrainingPlan) {
                     Text("От: ", style = MaterialTheme.typography.bodyLarge)
                     Text(
                         "  FitFood  ",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White,
+                        modifier = Modifier
+                            .background(color = Color(0xFF5E953B), RoundedCornerShape(10.dp))
+                    )
+                }
+                Row {
+                    Text("Сжигает калорий: ", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        "  ⚡ ${(plan.caloriesLoss).toInt()}  ",
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color.White,
                         modifier = Modifier
@@ -563,6 +577,7 @@ fun TrainingsHistory(navController: NavController) {
                     for(tra in trainings)
                     {
                         TrainingInListCard(tra, navController)
+                        Spacer(Modifier.height(15.dp))
                     }
                 } ?: run {
                     StatsImgText(Icons.Default.SearchOff,"История пуста")

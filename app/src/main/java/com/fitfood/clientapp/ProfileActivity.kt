@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -61,6 +62,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
@@ -70,6 +72,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -80,6 +83,7 @@ import com.fitfood.clientapp.models.FitPlan
 import com.fitfood.clientapp.models.Gender
 import com.fitfood.clientapp.models.User
 import com.fitfood.clientapp.services.DataService
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 val dataService = DataService()
@@ -436,6 +440,11 @@ fun ProfileForm(
     var showPasswordDialog by remember { mutableStateOf(false) }
     val currentPassword = remember { mutableStateOf("") }
     val newPassword = remember { mutableStateOf("") }
+    val newPassword2 = remember { mutableStateOf("") }
+    val context = LocalContext.current;
+    val coroutineScope = rememberCoroutineScope()
+    var isLoading by remember { mutableStateOf(false) }
+    var resultMessage by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -515,16 +524,16 @@ fun ProfileForm(
         }
 
         // Кнопка сохранения
-        Button(
-            onClick = { onSave() },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(70.dp),
-            shape = RoundedCornerShape(20.dp),
-            colors = ButtonDefaults.buttonColors(Color(0xFF5E953B))
-        ) {
-            Text("Сохранить изменения", style = MaterialTheme.typography.titleLarge)
-        }
+            //Button(
+        //    onClick = { onSave() },
+        //    modifier = Modifier
+        //        .fillMaxWidth()
+        //        .height(70.dp),
+        //    shape = RoundedCornerShape(20.dp),
+        //    colors = ButtonDefaults.buttonColors(Color(0xFF5E953B))
+        //) {
+        //    Text("Сохранить изменения", style = MaterialTheme.typography.titleLarge)
+        //}
 
         // Кнопка выхода
         Button(
@@ -556,7 +565,9 @@ fun ProfileForm(
             }
         }
     }
-
+    val sharedPreferences: SharedPreferences =
+        context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+    val token = sharedPreferences.getString("jwt", "").toString()
     // Всплывающее окно смены пароля
     if (showPasswordDialog) {
         AlertDialog(
@@ -577,20 +588,73 @@ fun ProfileForm(
                         icon = Icons.Default.LockOpen,
                         keyboard = KeyboardType.Password
                     )
+                    FitTextBox(
+                        content = newPassword2,
+                        label = "Повторите пароль",
+                        icon = Icons.Default.LockOpen,
+                        keyboard = KeyboardType.Password
+                    )
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        onChangePassword()
-                        showPasswordDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(Color(0xFF5E953B))
-                ) {
-                    Text("Сохранить")
+                if (resultMessage != null) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = resultMessage!!,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(8.dp)
+                        )
+                        Button(
+                            onClick = {
+                                resultMessage = null
+                                showPasswordDialog = false
+                            },
+                            colors = ButtonDefaults.buttonColors(Color(0xFF5E953B))
+                        ) {
+                            Text("OK")
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            if (newPassword.value == newPassword2.value
+                                && newPassword.value.length >= 5
+                                && newPassword.value.length <= 30) {
+                                isLoading = true
+                                coroutineScope.launch {
+                                    val success = dataService.changePassword(
+                                        token = token,
+                                        oldPassword = currentPassword.value,
+                                        newPassword = newPassword.value
+                                    )
+                                    isLoading = false
+                                    resultMessage = if (success) {
+                                        "Пароль успешно изменён!"
+                                    } else {
+                                        "Ошибка при изменении пароля\n(Возможно указан неверный пароль)."
+                                    }
+                                }
+                            } else {
+                                Toast.makeText(context, "Пароли не совпадают или новый пароль не соответствует требованиям", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
+                        enabled = !isLoading
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Сохранить")
+                        }
+                    }
                 }
             },
             dismissButton = {
+                if(resultMessage==null)
                 Button(
                     onClick = { showPasswordDialog = false },
                     colors = ButtonDefaults.buttonColors(Color(0xFFDFE0EA))

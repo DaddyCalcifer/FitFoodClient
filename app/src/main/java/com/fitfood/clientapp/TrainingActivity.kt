@@ -51,7 +51,7 @@ import com.fitfood.clientapp.models.Sport.TrainingPlan
 import com.fitfood.clientapp.ui.theme.ClientAppTheme
 
 @Composable
-fun TrainingSummaryScreen(train: Training, token: String) {
+fun TrainingSummaryScreen(train: Training, kcalLoss: Int, token: String) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -78,6 +78,17 @@ fun TrainingSummaryScreen(train: Training, token: String) {
             Spacer(Modifier.height(16.dp))
             Text(train.trainingPlan.description,
                 style = MaterialTheme.typography.titleLarge)
+        }
+        item{
+            Spacer(Modifier.height(16.dp))
+            Row{
+                Text("Сжигает калорий: ", style = MaterialTheme.typography.bodyLarge)
+                Text("  ${kcalLoss} ⚡ ",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White,
+                    modifier = Modifier
+                        .background(color = Color(0xFF5E953B), RoundedCornerShape(10.dp)))
+            }
         }
         item {
             Spacer(modifier = Modifier.height(16.dp))

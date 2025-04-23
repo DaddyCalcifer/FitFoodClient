@@ -240,6 +240,9 @@ fun LoginForm(navController: NavController?, context: Context?) {
                                     sharedPreferences.edit()
                                         .putString("jwt", authResponse.value)
                                         .apply()
+                                    sharedPreferences.edit()
+                                        .putString("last", "")
+                                        .apply()
 
                                     // Переход к MainScreen через NavController
                                     (context as? ComponentActivity)?.runOnUiThread {
@@ -327,14 +330,14 @@ fun RegisterForm(navController: NavController?, context: Context?) {
         FitPasswordBox(confirmPassword)
 
         Spacer(modifier = Modifier.height(10.dp))
-        TermsAndConditionsCheckbox(
-            checked = true,
-            onCheckedChange = {  },
-            onTermsClicked = {
-                Log.d("Registration", "Terms clicked")
-            }
-        )
-        Spacer(modifier = Modifier.height(10.dp))
+        //TermsAndConditionsCheckbox(
+        //    checked = true,
+        //    onCheckedChange = {  },
+        //    onTermsClicked = {
+        //        Log.d("Registration", "Terms clicked")
+        //    }
+        //)
+        //Spacer(modifier = Modifier.height(10.dp))
 
         Column(
             Modifier.fillMaxSize(),

@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -73,6 +74,17 @@ fun TrainingPlanSummaryScreen(plan: TrainingPlan, navController: NavController) 
             Text(plan.description,
                 style = MaterialTheme.typography.titleLarge)
         }
+        item{
+            Spacer(Modifier.height(16.dp))
+            Row{
+                Text("Сжигает калорий: ", style = MaterialTheme.typography.bodyLarge)
+                Text("  ${plan.caloriesLoss.toInt()} ⚡ ",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.White,
+                    modifier = Modifier
+                        .background(color = Color(0xFF5E953B), RoundedCornerShape(10.dp)))
+            }
+        }
         item {
             Spacer(modifier = Modifier.height(16.dp))
             ExercisesList(plan.exercises, plan.id, navController)
@@ -114,15 +126,19 @@ fun ExercisesList(exercises: List<Exercise>, trainPlanId: String?, navController
         val sharedPreferences: SharedPreferences =
             context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
         val token = sharedPreferences.getString("jwt", "").toString()
+        val isLoading = remember { mutableStateOf(false) }
 
         Button(
             onClick = {
                 coroutineScope.launch {
+                    isLoading.value = true
                     val training = dataService.sendCreateTraining(trainPlanId, token)
                     training?.let {
                         // Обработка объекта Training
                         Log.d("Training", "Тренировка началась: ${it.id}")
-
+                        sharedPreferences.edit()
+                            .putString("training", it.id)
+                            .apply()
                         // Пример действия: переход на экран тренировки или обновление UI
                         navController.navigate("training/${it.id}")
                     } ?: run {
@@ -135,8 +151,17 @@ fun ExercisesList(exercises: List<Exercise>, trainPlanId: String?, navController
                 .height(70.dp),
             shape = RoundedCornerShape(20.dp),
             colors = ButtonDefaults.buttonColors(Color(0xFF5E953B)),
+            enabled = !isLoading.value
         ) {
-            Text("Начать тренировку", style = MaterialTheme.typography.titleMedium)
+            if (isLoading.value) {
+                // Показываем индикатор загрузки
+                CircularProgressIndicator(
+                    color = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            } else {
+                Text("Начать тренировку", style = MaterialTheme.typography.titleMedium)
+            }
         }
         Spacer(Modifier.height(16.dp))
     }

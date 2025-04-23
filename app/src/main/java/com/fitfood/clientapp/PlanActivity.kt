@@ -1,6 +1,9 @@
 package com.fitfood.clientapp
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -38,6 +41,10 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import com.fitfood.clientapp.ui.theme.ClientAppTheme
@@ -45,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
 import androidx.navigation.NavType
@@ -55,6 +63,9 @@ import androidx.navigation.navArgument
 import com.fitfood.clientapp.models.FeedAct
 import com.fitfood.clientapp.models.FeedTotalStats
 import com.fitfood.clientapp.models.FitPlan
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 class PlanActivity: ComponentActivity() {
@@ -74,11 +85,20 @@ private val feedStats = FeedTotalStats();
 
 @Composable
 fun NutritionSummaryScreen(plan: FitPlan, stats: FeedTotalStats, navController: NavController) {
+    var isFixed by remember { mutableStateOf(false) }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp,8.dp,16.dp,0.dp)
     ) {
+        if(!isFixed) {
+            plan.dayKcal += stats.burntKcal
+            plan.breakfastKcal += stats.burntKcal * 0.275
+            plan.lunchKcal += stats.burntKcal * 0.35
+            plan.dinnerKcal += stats.burntKcal * 0.275
+            plan.otherKcal += stats.burntKcal * 0.1
+            isFixed = true
+        }
         item {
             Row (verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.clickable
@@ -98,7 +118,7 @@ fun NutritionSummaryScreen(plan: FitPlan, stats: FeedTotalStats, navController: 
             SummaryCard(plan, stats)
             Spacer(modifier = Modifier.height(16.dp))
         }
-        if(stats.ateKcal > plan.dayKcal * 1.05)
+        if(stats.ateKcal > plan.dayKcal * 1.015)
             item {
                 Row(
                     modifier = Modifier
@@ -109,6 +129,11 @@ fun NutritionSummaryScreen(plan: FitPlan, stats: FeedTotalStats, navController: 
                     horizontalArrangement = Arrangement.Center
                 )
                 {
+                    val context = LocalContext.current
+                    val sharedPreferences: SharedPreferences =
+                        context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                    val token = sharedPreferences.getString("jwt", "").toString()
+
                     Icon(imageVector = Icons.Default.Warning,
                         contentDescription = null,
                         Modifier.size(55.dp), tint = Color(
@@ -121,13 +146,23 @@ fun NutritionSummaryScreen(plan: FitPlan, stats: FeedTotalStats, navController: 
                             color = Color(0xFFFFFFFF))
                         Spacer(Modifier.height(10.dp))
                         Button(
-                            onClick = { navController.navigate("PhysicalData") },
+                            onClick = {
+                                CoroutineScope(Dispatchers.Main).launch {
+                                    val trainingPlanId = dataService.fetchTrainingPlanByKcal(kcal = (stats.ateKcal - plan.dayKcal).toInt(), token)
+                                    trainingPlanId?.let {
+                                        navController.navigate("trainingPlan/${it}")
+                                        Log.e("TrainingPlan", "План: ${it}")
+                                    } ?: run {
+                                        Log.e("TrainingPlan", "План не найден")
+                                    }
+                                }
+                                      },
                             modifier = Modifier
                                 .padding(vertical = 4.dp),
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(Color(0xFFFFFFFF)),
                         ) {
-                            Text("Подобрать\nупражнение", style = MaterialTheme.typography.bodyLarge,
+                            Text("Подобрать\nтренировку", style = MaterialTheme.typography.bodyLarge,
                                 color = Color(0xD3FF0000))
                         }
                     }
